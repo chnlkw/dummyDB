@@ -1,0 +1,42 @@
+4
+item
+4
+i_id		INTEGER
+i_name		VARCHAR(24)
+i_price		INTEGER
+i_data		VARCHAR(256)
+1
+i_id
+customer
+10
+c_id		INTEGER
+c_first		VARCHAR(24)
+c_middle	VARCHAR(2)
+c_last		VARCHAR(24)
+c_street	VARCHAR(64)
+c_city		VARCHAR(24)
+c_state		VARCHAR(2)
+c_zip		VARCHAR(6)
+c_phone		VARCHAR(11)
+c_data		VARCHAR(256)
+1
+c_id
+_order
+4
+o_id		INTEGER
+o_c_id		INTEGER
+o_ol_cnt	INTEGER
+o_date		VARCHAR(64)
+1
+o_id
+order_line
+4
+ol_o_id		INTEGER
+ol_number	INTEGER
+ol_i_id		INTEGER
+ol_amount	INTEGER
+2
+ol_o_id
+ol_number
+
+

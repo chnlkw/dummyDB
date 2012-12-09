@@ -1,0 +1,35 @@
+dymmyDB developing document
+
+=======
+Data storage
+
+	INTEGER 32-bit
+
+	VARCHAR(d) Consist of _, a-z, A-Z, or 0-9.
+		only 1 + 26 + 26 + 10 = 63 characters
+		use 6 bit to store 1 char. string memory reduced to 3/4
+		3 bytes = 24 bits = 4 chars
+		......xx | xxxxyyyy | yy......
+		memory comapre
+			orginal	reduced
+			1		3		
+			2		3
+			3		3
+			4		3		gain
+			5		6
+			6		6
+			7		6
+			8		6
+			9		9
+			10		9		gain
+			11		9		gain
+			12		9		gain
+			13		12		gain
+
+======
+Making data
+
+
+
+
+

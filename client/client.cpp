@@ -1,13 +1,8 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <string>
-#include <map>
-#include <cassert>
-
 #include "../include/client.h"
 #include "../tool/tokenize.h"
 #include "../tool/split_csv.h"
+
+#include "dummydb.h"
 
 using namespace std;
 

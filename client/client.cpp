@@ -3,6 +3,7 @@
 #include "../tool/split_csv.h"
 
 #include "dummydb.h"
+#include "berkeleydb.h"
 
 using namespace std;
 

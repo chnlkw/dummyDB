@@ -11,6 +11,7 @@ map<string, vector<string> > table2name;
 map<string, vector<string> > table2type;
 map<string, vector<string> > table2pkey;
 vector<string> result;
+map<string, DummyQuery> table2query;
 
 void done(const vector<string>& table, const map<string, int>& m,
 	int depth, vector<string>& row)
@@ -63,6 +64,7 @@ void create(const string& table, const vector<string>& column,
 	table2name[table] = column;
 	table2type[table] = type;
 	table2pkey[table] = key;
+	table2query[table] = *(new DummyQuery);
 }
 
 void train(const vector<string>& query, const vector<double>& weight)
@@ -97,8 +99,7 @@ void execute(const string& sql)
 
 	result.clear();
 
-	if (strstr(sql.c_str(), "INSERT") != NULL ||
-		strstr(sql.c_str(), "WHERE") != NULL) {
+	if (strstr(sql.c_str(), "INSERT") != NULL) {
 		fprintf(stderr, "Sorry, I give up.\n");
 		exit(1);
 	}
@@ -116,9 +117,37 @@ void execute(const string& sql)
 	for (i++; i < token.size(); i++) {
 		if (token[i] == "," || token[i] == ";")
 			continue;
+		if (token[i] == "WHERE")
+			break;
 		table.push_back(token[i]);
 	}
-
+	for (i++; i < token.size(); i++) {
+		for(int j = 0; j < table.size(); j++) {
+			vector<string>& name = table2name[table[j]];
+			vector<string>& type = table2type[table[j]];
+			int cInt = 0, cStr = 0, fType = -1;//caution: initial cInt = 1?
+			for (int z = 0; z < name.size(); z++) {
+				if (name[z] == token[i]) {
+					if (type[z] == "INTEGER") fType = 0;
+					else fType = 1; // type == "STRING"
+				}
+				if (type[z] == "INTEGER") cInt ++;
+				else cStr ++; // type == "STRING"
+			}
+			if (fType == 0) {
+				if (token[i+1] == "=") {
+					table2query[table[j]].create(cInt, atoi(token[i+2].c_str()));
+				} else if (token[i+1] == "<") {
+					table2query[table[j]].create(cInt, INT_MIN, atoi(token[i+2].c_str())-1);
+				} else {
+					table2query[table[j]].create(cInt, atoi(token[i+2].c_str())+1, INT_MAX);
+				}
+			} else if (fType == 1 && token[i+1] == "=") {
+				table2query[table[j]].create(cStr, token[i+2]);
+			}
+		}
+		i = i+3;
+	}
 	m.clear();
 	for (i = 0; i < output.size(); i++)
 		m[output[i]] = i;

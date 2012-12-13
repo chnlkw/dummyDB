@@ -21,6 +21,18 @@ private:
 	map<int, int> intequal;
 	map<int, string> strequal;
 public:
+	void create(int col, int val) {
+		intequal[col] = val;	
+	}
+	void create(int col, int low, int high) {
+		IntRangeQuery *range = new IntRangeQuery;
+		range->low = low;
+		range->high = high;
+		intrange[col] = *range;
+	}
+	void create(int col, string str) {
+		strequal[col] = str;
+	}
 	bool match(DummyItem &item)
 	{
 		for (const auto &it : intequal)

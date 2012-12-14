@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <climits>
+#include <sstream>
 
 #include "defs.h"
 

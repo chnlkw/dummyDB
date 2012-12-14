@@ -12,8 +12,8 @@ private:
 	int nInt, nIntKey;
 	int nStr, nStrKey;
 	vector<int> StringTypeLen;
-	vector<Db> IntKey;
-	vector<Db> StrKey;
+	vector<unique_ptr<Db>> IntKey;
+	vector<unique_ptr<Db>> StrKey;
 
 public:
 	BerkeleyDB(int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
@@ -21,7 +21,12 @@ public:
 	{
 		for (int i = 0; i < nIntKey; i++)
 		{
-			//IntKey.emplace_back(NULL, 0);
+			totalDB++;
+			ostringstream ss;
+			ss << "db_" << totalDB << ".db";
+			IntKey.emplace_back(new Db(nullptr, 0));
+			//IntKey.back()->open(NULL, );
+			cerr << ss.str() << endl;
 		}
 	}
 

@@ -24,7 +24,7 @@ public:
 			totalDB++;
 			ostringstream ss;
 			ss << "db_" << totalDB << ".db";
-			IntKey.emplace_back(new Db(nullptr, 0));
+			//IntKey.emplace_back(new Db(nullptr, 0));
 			//IntKey.back()->open(NULL, );
 			cerr << ss.str() << endl;
 		}

@@ -1,3 +1,4 @@
+#pragma once
 
 #include <cassert>
 #include <cstdio>
@@ -7,10 +8,11 @@
 #include <memory>
 #include <unordered_map>
 #include <string>
-#include <string>
 #include <vector>
 #include <climits>
 #include <sstream>
+#include <utility>
+#include <algorithm>
 
 #include "defs.h"
 
@@ -19,3 +21,4 @@
 #include <db_cxx.h>
 
 #endif
+

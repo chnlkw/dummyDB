@@ -5,6 +5,8 @@
 
 using namespace std;
 
+
+
 struct DummyItem
 {
 	vector<int> intdata;
@@ -55,23 +57,48 @@ public:
 	}
 };
 
-class DummyTable
+class BaseTable
 {
-private:
+protected:
 	int nInt, nIntKey;
 	int nStr, nStrKey;
 	vector<int> StringTypeLen;
+	map<string, int> col2intIdx;
+	map<string, int> col2strIdx;
+public:
+	BaseTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen) :
+		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), StringTypeLen(StringTypeLen)
+	{
+	}
+	virtual bool Insert(DummyItem &item) = 0;
+
+
+	virtual vector<DummyItem> Get() = 0;
+	virtual vector<DummyItem> Get(DummyQuery q) = 0;
+	virtual vector<DummyItem> GetIntKey(int idx, int key) = 0;
+	virtual vector<DummyItem> GetIntKey(int idx, int key, DummyQuery &q) = 0;
+	virtual vector<DummyItem> GetIntKeyRange(int idx, int low, int high) = 0;
+	virtual vector<DummyItem> GetIntKeyRange(int idx, int low, int high, DummyQuery &q) = 0;
+	virtual vector<DummyItem> GetStrKey(int idx, string str) = 0;
+	virtual vector<DummyItem> GetStrKey(int idx, string str, DummyQuery &q) = 0;
+
+};
+
+class DummyTable : public BaseTable
+{
+public:
 	vector<DummyItem> data;
 	vector<multimap<int, DummyItem>> IntKey;
 	vector<unordered_map<string, DummyItem>> StrKey;
-
-public:
-	DummyTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
-		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), StringTypeLen(StringTypeLen),
+	/*DummyTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen, map<string, int>& intCol, map<string, int>& strCol) :
+		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), intCol(intCol), strCol(strCol), StringTypeLen(StringTypeLen),
 		IntKey(nIntKey), StrKey(nStrKey)
 	{
+	}*/
+	DummyTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen) :
+		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen)
+	{
 	}
-
 	bool Insert(DummyItem &item)
 	{
 		data.push_back(item);
@@ -85,11 +112,11 @@ public:
 	vector<DummyItem> Get();
 	vector<DummyItem> Get(DummyQuery q);
 	vector<DummyItem> GetIntKey(int idx, int key);
-	vector<DummyItem> GetIntKey(int idx, int key, DummyQuery q);
+	vector<DummyItem> GetIntKey(int idx, int key, DummyQuery &q);
 	vector<DummyItem> GetIntKeyRange(int idx, int low, int high);
-	vector<DummyItem> GetIntKeyRange(int idx, int low, int high, DummyQuery q);
+	vector<DummyItem> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
 	vector<DummyItem> GetStrKey(int idx, string str);
-	vector<DummyItem> GetStrKey(int idx, string str, DummyQuery q);
+	vector<DummyItem> GetStrKey(int idx, string str, DummyQuery& q);
 
 	template <class It>
 	class Cursor
@@ -137,16 +164,15 @@ public:
 
 class DummyDB
 {
-private:
-	int nTable;
-	vector<DummyTable> tables;
 public:
+	int nTable;
+	map<string, unique_ptr<BaseTable>> tables;
 	DummyDB() : nTable(0)
 	{
 	}
-	int CreateTable(DummyTable table)
+	int CreateTable(unique_ptr<BaseTable> &table, const string& name)
 	{
-		tables.push_back(table);
+		tables[name].swap(table);
 		return nTable++;
 	}
 };

@@ -4,6 +4,28 @@
 
 using namespace std;
 
+char* itoa(int value) {
+	char* str = new char[20];
+	char* res = new char[20];
+	int count = 0, i = 0;
+	while (value/10 > 0) {
+		int num = value-value/10*10;
+		value = value/10;
+		str[count] = num+48;
+		count++;
+	}
+	str[count] = value+48;
+	count++;
+	while (count > 0) {
+		count--;
+		res[i] = str[count];
+		i++;
+	}
+	res[i] = '\0';
+	delete str;
+	return res;
+}
+
 struct DummyItem
 {
 	vector<int> intdata;
@@ -56,21 +78,23 @@ public:
 
 class DummyTable
 {
-private:
+public:
 	int nInt, nIntKey;
 	int nStr, nStrKey;
 	vector<int> StringTypeLen;
 	vector<DummyItem> data;
 	vector<multimap<int, DummyItem>> IntKey;
 	vector<unordered_map<string, DummyItem>> StrKey;
-
-public:
-	DummyTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
-		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), StringTypeLen(StringTypeLen),
+	map<string, int> col2intIdx;
+	map<string, int> col2strIdx;
+	/*DummyTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen, map<string, int>& intCol, map<string, int>& strCol) :
+		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), intCol(intCol), strCol(strCol), StringTypeLen(StringTypeLen),
 		IntKey(nIntKey), StrKey(nStrKey)
 	{
+	}*/
+	DummyTable(int nInt = 0, int nIntKey = 0, int nStr = 0, int nStrKey = 0) : nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey)
+	{
 	}
-
 	bool Insert(DummyItem &item)
 	{
 		data.push_back(item);
@@ -136,16 +160,15 @@ public:
 
 class DummyDB
 {
-private:
-	int nTable;
-	vector<DummyTable> tables;
 public:
+	int nTable;
+	map<string, DummyTable> tables;
 	DummyDB() : nTable(0)
 	{
 	}
-	int CreateTable(DummyTable table)
+	int CreateTable(DummyTable& table, const string& name)
 	{
-		tables.push_back(table);
+		tables[name] = table;
 		return nTable++;
 	}
 };

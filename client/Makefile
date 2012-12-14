@@ -4,7 +4,7 @@ OBJS	= $(patsubst %.cpp, %.o, $(wildcard *.cpp))
 
 all : $(OBJS)
 
-%.o : %.cpp
+%.o : %.cpp *.h
 	$(CC) $(FLAGS) -o $@ $<
 
 .PHONY : clean

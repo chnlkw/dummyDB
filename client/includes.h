@@ -9,6 +9,9 @@
 #include <string>
 #include <string>
 #include <vector>
+#include <climits>
+
+#include "defs.h"
 
 #ifdef USE_DB_CXX
 

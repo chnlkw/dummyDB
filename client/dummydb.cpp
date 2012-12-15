@@ -5,7 +5,7 @@ vector<DummyItem> DummyTable::Get()
 	return data;
 }
 
-vector<DummyItem> DummyTable::Get(DummyQuery q)
+vector<DummyItem> DummyTable::Get(DummyQuery& q)
 {
 	vector<DummyItem> ret;
 
@@ -27,7 +27,7 @@ vector<DummyItem> DummyTable::GetIntKey(int idx, int key)
 	return ret;
 }
 
-vector<DummyItem> DummyTable::GetIntKey(int idx, int key, DummyQuery q)
+vector<DummyItem> DummyTable::GetIntKey(int idx, int key, DummyQuery& q)
 {
 	vector<DummyItem> ret;
 	for (auto it = IntKey[idx].lower_bound(key); it != IntKey[idx].upper_bound(key); it++)
@@ -48,7 +48,7 @@ vector<DummyItem> DummyTable::GetIntKeyRange(int idx, int low, int high)
 	return ret;
 }
 
-vector<DummyItem> DummyTable::GetIntKeyRange(int idx, int low, int high, DummyQuery q)
+vector<DummyItem> DummyTable::GetIntKeyRange(int idx, int low, int high, DummyQuery& q)
 {
 	vector<DummyItem> ret;
 	for (auto it = IntKey[idx].lower_bound(low); it != IntKey[idx].upper_bound(high); it++)
@@ -71,7 +71,7 @@ vector<DummyItem> DummyTable::GetStrKey(int idx, string str)
 	return ret;
 }
 
-vector<DummyItem> DummyTable::GetStrKey(int idx, string str, DummyQuery q)
+vector<DummyItem> DummyTable::GetStrKey(int idx, string str, DummyQuery& q)
 {
 	vector<DummyItem> ret;
 	auto range = StrKey[idx].equal_range(str);

@@ -63,8 +63,6 @@ protected:
 	int nInt, nIntKey;
 	int nStr, nStrKey;
 	vector<int> StringTypeLen;
-	map<string, int> col2intIdx;
-	map<string, int> col2strIdx;
 public:
 	BaseTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen) :
 		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), StringTypeLen(StringTypeLen)
@@ -74,7 +72,7 @@ public:
 
 
 	virtual vector<DummyItem> Get() = 0;
-	virtual vector<DummyItem> Get(DummyQuery q) = 0;
+	virtual vector<DummyItem> Get(DummyQuery& q) = 0;
 	virtual vector<DummyItem> GetIntKey(int idx, int key) = 0;
 	virtual vector<DummyItem> GetIntKey(int idx, int key, DummyQuery &q) = 0;
 	virtual vector<DummyItem> GetIntKeyRange(int idx, int low, int high) = 0;
@@ -98,6 +96,13 @@ public:
 	DummyTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen) :
 		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen)
 	{
+		// be careful that here, we assume, keys are always at the first place
+		for (int i = 0; i < nIntKey; i++) {
+			IntKey.push_back(multimap<int, DummyItem>());
+		}
+		for (int i = 0; i < nStrKey; i++) {
+			StrKey.push_back(unordered_map<string, DummyItem>());
+		}
 	}
 	bool Insert(DummyItem &item)
 	{
@@ -110,7 +115,7 @@ public:
 	}
 
 	vector<DummyItem> Get();
-	vector<DummyItem> Get(DummyQuery q);
+	vector<DummyItem> Get(DummyQuery& q);
 	vector<DummyItem> GetIntKey(int idx, int key);
 	vector<DummyItem> GetIntKey(int idx, int key, DummyQuery &q);
 	vector<DummyItem> GetIntKeyRange(int idx, int low, int high);

@@ -44,6 +44,34 @@ char* itoa(int value) {
 	return res;
 }
 
+void insert(const string& sql) {
+	DummyItem dummyItem;
+	vector<string> token;
+	tokenize(sql.c_str(), token);
+	int i = 0;
+	for (; i < token.size(); i++) {
+		if (token[i] == "INSERT") continue;
+		if (token[i] == "TO") break;
+	}
+	string& table = token[++i];
+	vector<string>& type = table2type[table];
+	for (i += 2; i < token.size(); i++) {
+		if (token[i] == "(") continue;
+		DummyItem dummyItem;
+		int j = 0;
+		for(;token[i] != ")"; i++) {
+			if (token[i] == ",") continue;
+			if (type[j] == "INTEGER") {
+				dummyItem.intdata.push_back(atoi(token[i].c_str()));
+			} else {
+				dummyItem.strdata.push_back(token[i]);
+			}
+			j++;
+		}
+		dummyDB.tables[table]->Insert(dummyItem);
+	}
+}
+
 void done(const vector<string>& table, map<string, int>& m,
 	int depth, vector<string>& row, vector<DummyItem>& record)
 {
@@ -212,7 +240,6 @@ void train(const vector<string>& query, const vector<double>& weight)
 
 void load(const string& tableName, const vector<string>& row)
 {
-	vector<string>& column = table2name[tableName];
 	vector<string>& type = table2type[tableName];
 	// key processing reserved
 	for (int i = 0; i < row.size(); i++) {
@@ -244,8 +271,8 @@ void execute(const string& sql)
 	result.clear();
 
 	if (strstr(sql.c_str(), "INSERT") != NULL) {
-		fprintf(stderr, "Sorry, I give up.\n");
-		exit(1);
+		insert(sql);
+		return;
 	}
 
 	output.clear();

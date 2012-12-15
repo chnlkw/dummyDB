@@ -1,7 +1,5 @@
-#ifndef _DEFS_H_
-
-#define _DEFS_H_
+#pragma once
 
 #define FOREACH(i, a) for (auto i = a.begin(); i != a.end(); i++)
 
-#endif
+#define USE_DB_CXX // use Berkeley DB

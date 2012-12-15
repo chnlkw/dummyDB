@@ -1,13 +1,24 @@
+#pragma once
 
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <db_cxx.h>
 #include <map>
 #include <memory>
 #include <unordered_map>
 #include <string>
-#include <string>
 #include <vector>
-#include <limits.h>
+#include <climits>
+#include <sstream>
+#include <utility>
+#include <algorithm>
+
+#include "defs.h"
+
+#ifdef USE_DB_CXX
+
+#include <db_cxx.h>
+
+#endif
+

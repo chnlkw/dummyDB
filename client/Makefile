@@ -1,5 +1,5 @@
 CC		= g++
-FLAGS	= -O2 -c -D_FILE_OFFSET_BITS=64 -std=c++11 -ldb_cxx
+FLAGS	= -c -D_FILE_OFFSET_BITS=64 -std=c++11 -ldb_cxx -O2
 OBJS	= $(patsubst %.cpp, %.o, $(wildcard *.cpp))
 
 all : $(OBJS)

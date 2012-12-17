@@ -1,4 +1,0 @@
-3
-SELECT o_date , c_data , c_first , c_last , ol_amount , i_name FROM _order , customer , order_line , item ;
-SELECT i_name , i_data FROM item ;
-SELECT i_name , i_data FROM item , WHERE i_price > 5 ;

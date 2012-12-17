@@ -1,5 +1,5 @@
 CC		= g++
-FLAGS	= -O2 -D_FILE_OFFSET_BITS=64
+FLAGS	= -O2 -D_FILE_OFFSET_BITS=64 -ldb_cxx
 
 .PHONY : all clean tar
 

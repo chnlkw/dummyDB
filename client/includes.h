@@ -13,12 +13,13 @@
 #include <sstream>
 #include <utility>
 #include <algorithm>
+#include <unistd.h>
 
 #include "defs.h"
 
 #ifdef USE_DB_CXX
 
-#include <db_cxx.h>
+
 
 #endif
 

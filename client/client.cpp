@@ -227,7 +227,11 @@ void create(const string& tablename, const vector<string>& column,
 	}
 	// be careful that here, we assume, are only int keys
 	nIntKey = key.size();
+#ifdef USE_DB_CXX
+	unique_ptr<BaseTable> table(new BDBTable(tablename, nInt, nIntKey, nStr, nStrKey, StringTypeLen));
+#else
 	unique_ptr<BaseTable> table(new DummyTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
+#endif
 	dummyDB.CreateTable(table, tablename);
 	//table2col2intIdx[tablename] = col2intIdx;
 	//table2col2strIdx[tablename] = col2strIdx;

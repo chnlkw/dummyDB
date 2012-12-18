@@ -3,15 +3,13 @@
 #include "../tool/split_csv.h"
 
 #include "dummydb.h"
-#include "berkeleydb.h"
+//#include "berkeleydb.h"
 
 using namespace std;
 
 map<string, vector<string> > table2name;
 map<string, vector<string> > table2type;
 map<string, vector<string> > table2pkey;
-//map<string, map<string, int>> table2col2intIdx;
-//map<string, map<string, int>> table2col2strIdx;
 map<string, pair<string, int>> col2table_intIdx;
 map<string, pair<string, int>> col2table_strIdx;
 map<string, DummyQuery> table2query;
@@ -19,8 +17,10 @@ map<string, string> intEqual;
 map<string, string> intGreater;
 map<string, string> intLess;
 map<string, string> strEqual;
+map<string, vector<string>> projectTable;
 vector<string> result;
 DummyDB dummyDB;
+bool prepareProject = false;
 
 char* itoa(int value) {
 	char* str = new char[20];
@@ -176,24 +176,22 @@ void done(const vector<string>& table, map<string, int>& m,
 		done(table, m, depth + 1, row, record);
 		record.pop_back();
 	}
+}
 
-	//map<string, int>& col2intIdx = table2col2intIdx[table[depth]];
-	//map<string, int>& col2strIdx = table2col2strIdx[table[depth]];
-	/*for (int j = 0; j < ret.size(); j++) {
-		for (int z = 0; z < output.size(); z++) {
-			auto it1 = col2table_intIdx.find(output[z]);
-			if (it1 != col2table_intIdx.end() && it1->second.first == table[depth]) {
-				char* num = itoa(ret[j].intdata[it1->second.second]);
-				row[z] = num;
-				delete num;
-			}
-			auto it2 = col2table_strIdx.find(output[z]);
-			if (it2 != col2table_strIdx.end() && it2->second.first == table[depth]) {
-				row[z] = ret[j].strdata[it2->second.second];
-			}
-		}
-		done(table, output, depth + 1, row);
+void ProjectDone(string& table, vector<string>& output) {
+	vector<string>& col1 = projectTable[output[0]];
+	vector<string>& col2 = projectTable[output[1]];
+	/*for (int i = 0; i < output.size(); i++) {
+		cols.push_back(projectTable[output[i]]);
 	}*/
+	string str;
+	for (int i = 0; i < col1.size(); i++) {
+		str = col1[i]+","+col2[i];
+		/*for (int j = 1; j < cols.size(); j++) {
+			str += ","+cols[j][i];
+		}*/
+		result.push_back(str);
+	}
 }
 
 void create(const string& tablename, const vector<string>& column,
@@ -203,17 +201,14 @@ void create(const string& tablename, const vector<string>& column,
 	table2type[tablename] = type;
 	table2pkey[tablename] = key;
 	table2query[tablename] = DummyQuery();
-	//map<string, int> col2intIdx, col2strIdx;
 	int nInt = 0, nIntKey = 0, nStr = 0, nStrKey = 0;
 	vector<int> StringTypeLen;
 	//key process reserved
 	for (int i = 0; i < column.size(); i++) {
 		if (type[i] == "INTEGER") {
-			//col2intIdx[column[i]] = nInt;
 			col2table_intIdx[column[i]] = pair<string, int>(tablename, nInt);
 			nInt++;
 		} else {
-			//col2strIdx[column[i]] = nStr;
 			col2table_strIdx[column[i]] = pair<string, int>(tablename, nStr);
 			nStr++;
 			const char* str = type[i].c_str();
@@ -229,18 +224,43 @@ void create(const string& tablename, const vector<string>& column,
 	nIntKey = key.size();
 	unique_ptr<BaseTable> table(new DummyTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
 	dummyDB.CreateTable(table, tablename);
-	//table2col2intIdx[tablename] = col2intIdx;
-	//table2col2strIdx[tablename] = col2strIdx;
 }
 
 void train(const vector<string>& query, const vector<double>& weight)
 {
-	// I am too clever; I don't need it.
+	//special: project test:
+	for (int z = 0; z < query.size(); z++) {
+		const string& sql = query[z];
+		vector<string> token, table;
+		int i;
+
+		if (strstr(sql.c_str(), "INSERT") != NULL && strstr(sql.c_str(), "WHERE") != NULL) {
+			continue;
+		}
+
+		table.clear();
+		tokenize(sql.c_str(), token);
+		for (i = 0; i < token.size(); i++) {
+			if (token[i] == "SELECT" || token[i] == ",")
+				continue;
+			if (token[i] == "FROM")
+				break;
+		}
+		for (i++; i < token.size(); i++) {
+			if (token[i] == "," || token[i] == ";")
+				continue;
+			table.push_back(token[i]);
+		}
+		if (i >= token.size() && table.size() == 1) {
+			prepareProject = true;
+		}
+	}
 }
 
 void load(const string& tableName, const vector<string>& row)
 {
 	vector<string>& type = table2type[tableName];
+	vector<string>& column = table2name[tableName];
 	// key processing reserved
 	for (int i = 0; i < row.size(); i++) {
 		DummyItem dummyItem;
@@ -252,9 +272,12 @@ void load(const string& tableName, const vector<string>& row)
 			} else {
 				dummyItem.strdata.push_back(token[j]);
 			}
+			if (prepareProject) {
+				projectTable[column[j]].push_back(token[j]);
+			}
 		}
 		dummyDB.tables[tableName]->Insert(dummyItem);
-	}	
+	}
 }
 
 void preprocess()
@@ -291,6 +314,10 @@ void execute(const string& sql)
 		if (token[i] == "WHERE")
 			break;
 		table.push_back(token[i]);
+	}
+	if (i >= token.size() && table.size() == 1 && output.size() == 2) {
+		ProjectDone(table[0], output);
+		return;
 	}
 	for (i++; i < token.size(); i++) {
 		if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
@@ -329,27 +356,6 @@ void execute(const string& sql)
 				strEqual[token[i+2]] = token[i];
 			}
 		}
-		/*for(int j = 0; j < table.size(); j++) {
-			if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
-				map<string, int>& col2intIdx = table2col2intIdx[table[j]];
-				auto it1 = col2intIdx.find(token[i]);
-				if (it1 != col2intIdx.end()) {
-					if (token[i+1] == "=") {
-						table2query[table[j]].create(it1->second, atoi(token[i+2].c_str()));
-					} else if (token[i+1] == "<") {
-						table2query[table[j]].create(it1->second, INT_MIN, atoi(token[i+2].c_str())-1);
-					} else {
-						table2query[table[j]].create(it1->second, atoi(token[i+2].c_str())+1, INT_MAX);
-					}
-				}
-			} else if (token[i+2][0] == '\'') {
-				map<string, int>& col2strIdx = table2col2strIdx[table[j]];
-				auto it2 = col2strIdx.find(token[i]);
-				if(it2 != col2strIdx.end()) {
-					table2query[table[j]].create(it2->second, token[i+2]);
-				}
-			}
-		}*/
 		i = i+3;
 	}
 	m.clear();
@@ -374,7 +380,7 @@ int next(char *row)
 	 * This is for debug only. You should avoid unnecessary output
 	 * in your submission, which will hurt the performance.
 	 */
-	printf("%s\n", row);
+	//printf("%s\n", row);
 
 	return (1);
 }

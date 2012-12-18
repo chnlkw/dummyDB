@@ -6,8 +6,8 @@
 #include <cassert>
 #include <sys/time.h>
 
-#include "./tool/hash.h"
-#include "./include/client.h"
+#include "./client/tool/hash.h"
+#include "./client/client.h"
 
 #define PATH		"test/"
 #define SCHEMA		(PATH "schema")

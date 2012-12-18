@@ -4,7 +4,7 @@
 #include "dummydb.h"
 #include "utils.h"
 
-#include <db_cxx.h>
+#include "./db/build_unix/db_cxx.h"
 
 using namespace std;
 

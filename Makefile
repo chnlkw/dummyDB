@@ -1,16 +1,14 @@
 CC		= g++
-FLAGS	= -O2 -D_FILE_OFFSET_BITS=64 -ldb_cxx
+FLAGS	= -O2 -D_FILE_OFFSET_BITS=64
 
 .PHONY : all clean tar
 
 all :
 	$(MAKE) --directory=client
-	$(MAKE) --directory=tool
-	$(CC) $(FLAGS) -o run main.cpp client/*.o tool/*.o
+	$(CC) $(FLAGS) -o run main.cpp client/*.o client/tool/*.o -lpthread client/db/build_unix/*.o
 
 clean :
 	$(MAKE) --directory=client clean
-	$(MAKE) --directory=tool clean
 	rm -f run *.tar.gz data/*
 
 tar :

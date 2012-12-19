@@ -68,6 +68,9 @@ public:
 		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), StringTypeLen(StringTypeLen)
 	{
 	}
+	virtual ~BaseTable()
+	{
+	}
 	virtual bool Insert(DummyItem &item) = 0;
 
 

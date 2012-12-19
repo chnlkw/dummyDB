@@ -1,3 +1,3 @@
 #pragma once
 
-#define nUSE_DB_CXX // use Berkeley DB
+#define USE_DB_CXX // use Berkeley DB

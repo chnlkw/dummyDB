@@ -3,15 +3,34 @@
 
 vector<DummyItem> BDBTable::Get()
 {
-	vector<DummyItem> data;
-	return data;
+	vector<DummyItem> answer;
+	Dbc *cursorp;
+	PrimaryKey->cursor(NULL, &cursorp, 0);
+	Dbt key, data;
+	int ret;
+	while ((ret = cursorp->get(&key, &data, DB_NEXT)) == 0)
+	{
+		DummyItem item = to_item(data, nInt, nStr);
+		answer.push_back(item);
+	}
+	return answer;
 }
 
 vector<DummyItem> BDBTable::Get(DummyQuery& q)
 {
-	vector<DummyItem> ret;
-
-	return ret;
+	vector<DummyItem> answer;
+	Dbc *cursorp;
+	PrimaryKey->cursor(NULL, &cursorp, 0);
+	Dbt key, data;
+	int ret;
+	while ((ret = cursorp->get(&key, &data, DB_NEXT)) == 0)
+	{
+		int k = *(int*)key.get_data();
+		DummyItem item = to_item(data, nInt, nStr);
+		answer.push_back(item);
+	}
+	cursorp->close();
+	return answer;
 }
 
 vector<DummyItem> BDBTable::GetIntKey(int idx, int key)

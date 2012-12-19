@@ -8,7 +8,43 @@
 
 using namespace std;
 
-
+class BDBItem
+{
+	int size;
+	char *buf;
+public:
+	BDBItem(DummyItem & item)
+	{
+		size = item.intdata.size() * sizeof(int);
+		for (auto &str : item.strdata)
+		{
+			size += str.length() + 1;
+		}
+		buf = new char[size];
+		int *p = (int*)buf;
+		for (auto &i : item.intdata)
+		{
+			*p = i;
+			p++;
+		}
+		char *s = (char *)p;
+		for (auto &str : item.strdata)
+		{
+			strcpy(s, str.c_str());
+			s += str.length();
+			*s = '\0';
+			s++;
+		}
+	}
+	Dbt dbt()
+	{
+		return Dbt(buf, size);
+	}
+	~BDBItem()
+	{
+		delete [] buf;
+	}
+};
 
 class BDBTable : public BaseTable
 {
@@ -43,7 +79,7 @@ public:
 		}
 	}
 
-	~BDBTable()
+	virtual ~BDBTable()
 	{
 		PrimaryKey->close(0);
 		for (auto & db : IntKey)
@@ -51,31 +87,49 @@ public:
 		for (auto & db : StrKey)
 			db->close(0);
 	}
-	Dbt to_dbt(DummyItem & item)
+
+	DummyItem to_item(Dbt &d, int nInt, int nStr)
 	{
-		stringstream ss;
-		for (auto & i : item.intdata)
-			ss.write((char*)&i, sizeof(int));
-		for (auto & s : item.strdata)
-			ss << s << '\0';
-		char * str = &ss.str()[0];
-		for (auto & i : item.intdata)
-			cerr << i << ',';
-		for (auto & s : item.strdata)
-			cerr << s <<',';
-		cerr << "\tlen = " <<ss.str().length() << endl;
-		return Dbt(str, ss.str().length());
+		DummyItem item;
+		int * p = (int*)d.get_data();
+		for (int i = 0; i < nInt; i++)
+		{
+			item.intdata.push_back(*p);
+			p++;
+		}
+		char *s = (char*)p;
+		for (int i = 0; i < nStr; i++)
+		{
+			item.strdata.push_back(s);
+			s += strlen(s) + 1;
+		}
+		return item;
 	}
-	bool Insert(DummyItem &item)
+	bool Insert(DummyItem &dummyitem)
 	{
 /*		data.push_back(item);
 		for (int i = 0; i < nIntKey; i++)
 			IntKey[i].insert(make_pair(item.intdata[i], item));
 		for (int i = 0; i < nStrKey; i++)
 			StrKey[i].insert(make_pair(item.strdata[i], item));*/
-		Dbt data = to_dbt(item);
+		BDBItem bdbitem(dummyitem);
+		Dbt data = bdbitem.dbt();
+		totalKeys++;
+		Dbt key(&totalKeys, sizeof(totalKeys));
+		int ret = PrimaryKey->put(NULL, &key, &data, 0);
+		for (int i = 0; i < nIntKey; i++)
+		{
+			Dbt index(&dummyitem.intdata[i], sizeof(int));
+			IntKey[i]->put(NULL, &index, &key, 0);
+		}
+		for (int i = 0; i < nStrKey; i++)
+		{
+			Dbt index((char*)dummyitem.strdata[i].c_str(), dummyitem.strdata[i].length()+1);
+			StrKey[i]->put(NULL, &index, &key, 0);
+		}
 		return true;
 	}
+
 
 	vector<DummyItem> Get();
 	vector<DummyItem> Get(DummyQuery& q);

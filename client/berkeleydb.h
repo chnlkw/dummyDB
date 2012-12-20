@@ -55,27 +55,21 @@ private:
 	vector<string> DbName;
 	size_t totalKeys;
 
-	Db* NewDB(string name)
-	{
-		Db* db = new Db(nullptr, 0);
-		DbName.push_back(name);
-		db->open(NULL, name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
-		return db;
-	}
+	Db* NewDB(string name, bool isduplicated = false);
 
 public:
 	BDBTable(string tablename, int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
 		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen), totalKeys(0)
 	{
 		tablename = "data/db_" + tablename;
-		PrimaryKey.reset(NewDB(tablename + ".primarykey"));
+		PrimaryKey.reset(NewDB(tablename + ".primarykey", false));
 		for (int i = 0; i < nIntKey; i++)
 		{
-			IntKey.emplace_back(NewDB(tablename + ".intkey." + tostring(i)));
+			IntKey.emplace_back(NewDB(tablename + ".intkey." + tostring(i), true));
 		}
 		for (int i = 0; i < nStrKey; i++)
 		{
-			StrKey.emplace_back(NewDB(tablename + ".strkey." + tostring(i)));
+			StrKey.emplace_back(NewDB(tablename + ".strkey." + tostring(i), true));
 		}
 	}
 
@@ -88,48 +82,8 @@ public:
 			db->close(0);
 	}
 
-	DummyItem to_item(Dbt &d, int nInt, int nStr)
-	{
-		DummyItem item;
-		int * p = (int*)d.get_data();
-		for (int i = 0; i < nInt; i++)
-		{
-			item.intdata.push_back(*p);
-			p++;
-		}
-		char *s = (char*)p;
-		for (int i = 0; i < nStr; i++)
-		{
-			item.strdata.push_back(s);
-			s += strlen(s) + 1;
-		}
-		return item;
-	}
-	bool Insert(DummyItem &dummyitem)
-	{
-/*		data.push_back(item);
-		for (int i = 0; i < nIntKey; i++)
-			IntKey[i].insert(make_pair(item.intdata[i], item));
-		for (int i = 0; i < nStrKey; i++)
-			StrKey[i].insert(make_pair(item.strdata[i], item));*/
-		BDBItem bdbitem(dummyitem);
-		Dbt data = bdbitem.dbt();
-		totalKeys++;
-		Dbt key(&totalKeys, sizeof(totalKeys));
-		int ret = PrimaryKey->put(NULL, &key, &data, 0);
-		for (int i = 0; i < nIntKey; i++)
-		{
-			Dbt index(&dummyitem.intdata[i], sizeof(int));
-			IntKey[i]->put(NULL, &index, &key, 0);
-		}
-		for (int i = 0; i < nStrKey; i++)
-		{
-			Dbt index((char*)dummyitem.strdata[i].c_str(), dummyitem.strdata[i].length()+1);
-			StrKey[i]->put(NULL, &index, &key, 0);
-		}
-		return true;
-	}
 
+	bool Insert(DummyItem &dummyitem);
 
 	vector<DummyItem> Get();
 	vector<DummyItem> Get(DummyQuery& q);

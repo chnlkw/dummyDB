@@ -67,7 +67,7 @@ public:
 	BDBTable(string tablename, int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
 		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen), totalKeys(0)
 	{
-		tablename = "db_" + tablename;
+		tablename = "data/db_" + tablename;
 		PrimaryKey.reset(NewDB(tablename + ".primarykey"));
 		for (int i = 0; i < nIntKey; i++)
 		{

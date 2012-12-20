@@ -378,7 +378,9 @@ int next(char *row)
 	 * This is for debug only. You should avoid unnecessary output
 	 * in your submission, which will hurt the performance.
 	 */
+#ifdef PRINT_ROW
 	printf("%s\n", row);
+#endif
 
 	return (1);
 }

@@ -3,7 +3,7 @@
 #include "../tool/split_csv.h"
 
 #include "dummydb.h"
-//#include "berkeleydb.h"
+#include "berkeleydb.h"
 
 using namespace std;
 
@@ -17,7 +17,8 @@ map<string, string> intEqual;
 map<string, string> intGreater;
 map<string, string> intLess;
 map<string, string> strEqual;
-map<string, vector<string>> projectTable;
+map<string, int> col2index;
+vector<vector<string>> colData;
 vector<string> result;
 DummyDB dummyDB;
 bool prepareProject = false;
@@ -179,19 +180,21 @@ void done(const vector<string>& table, map<string, int>& m,
 }
 
 void ProjectDone(string& table, vector<string>& output) {
-	vector<string>& col1 = projectTable[output[0]];
-	vector<string>& col2 = projectTable[output[1]];
-	/*for (int i = 0; i < output.size(); i++) {
-		cols.push_back(projectTable[output[i]]);
-	}*/
+	int colSize = output.size();
+	int* index = new int[colSize];
+	for (int i = 0; i < colSize; i++) {
+		index[i] = col2index[output[i]];
+	}
+	int resSize = colData[index[0]].size();
 	string str;
-	for (int i = 0; i < col1.size(); i++) {
-		str = col1[i]+","+col2[i];
-		/*for (int j = 1; j < cols.size(); j++) {
-			str += ","+cols[j][i];
-		}*/
+	for (int i = 0; i < resSize; i++) {
+		str = colData[index[0]][i];
+		for (int j = 1; j < colSize; j++) {
+			str += ","+colData[index[j]][i];
+		}
 		result.push_back(str);
 	}
+	delete index;
 }
 
 void create(const string& tablename, const vector<string>& column,
@@ -219,6 +222,8 @@ void create(const string& tablename, const vector<string>& column,
 			string len = type[i].substr(s, p-s);
 			StringTypeLen.push_back(atoi(len.c_str()));
 		}
+		col2index[column[i]] = colData.size();
+		colData.push_back(vector<string>());
 	}
 	// be careful that here, we assume, are only int keys
 	nIntKey = key.size();
@@ -273,7 +278,8 @@ void load(const string& tableName, const vector<string>& row)
 				dummyItem.strdata.push_back(token[j]);
 			}
 			if (prepareProject) {
-				projectTable[column[j]].push_back(token[j]);
+				int idx = col2index[column[j]];
+				colData[idx].push_back(token[j]);
 			}
 		}
 		dummyDB.tables[tableName]->Insert(dummyItem);

@@ -6,7 +6,7 @@
 #include <cassert>
 #include <sys/time.h>
 
-#include "./client/tool/hash.h"
+#include "./hash.h"
 #include "./client/client.h"
 
 #define PATH		"test/"

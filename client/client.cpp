@@ -1,6 +1,6 @@
 #include "client.h"
-#include "tool/tokenize.h"
-#include "tool/split_csv.h"
+#include "tokenize.h"
+#include "split_csv.h"
 
 #include "dummydb.h"
 #include "berkeleydb.h"

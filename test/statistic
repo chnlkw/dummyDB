@@ -1,7 +1,0 @@
-3
-SELECT o_date , c_data , c_first , c_last , ol_amount , i_name FROM _order , customer , order_line , item ;
-50.0
-SELECT i_name , i_data FROM item ;
-50.0
-SELECT test1_num1 , test1_num2 FROM data01 ;
-50.0

@@ -1,9 +1,9 @@
-#include "../include/client.h"
-#include "../tool/tokenize.h"
-#include "../tool/split_csv.h"
+#include "client.h"
+#include "tool/tokenize.h"
+#include "tool/split_csv.h"
 
 #include "dummydb.h"
-#include "berkeleydb.h"
+//#include "berkeleydb.h"
 
 using namespace std;
 
@@ -74,7 +74,7 @@ void insert(const string& sql) {
 }
 
 void done(const vector<string>& table, map<string, int>& m,
-	int depth, vector<string>& row, vector<DummyItem>& record)
+	int depth, vector<string>& row, vector<int>& record)
 {
 	string str;
 	if (depth == table.size()) {
@@ -94,7 +94,7 @@ void done(const vector<string>& table, map<string, int>& m,
 		}
 	}
 
-	vector<DummyItem> ret = dummyDB.tables[table[depth]]->Get(table2query[table[depth]]);
+	vector<int> ret = dummyDB.tables[table[depth]]->Get(table2query[table[depth]]);
 	for (int j = 0; j < ret.size(); j++) {
 		bool isSkip = 0;
 		for (int z = 0; z < column.size() && !isSkip; z++) {
@@ -110,7 +110,7 @@ void done(const vector<string>& table, map<string, int>& m,
 						break;
 					}
 				}
-				if (i != depth && ret[j].intdata[it->second.second] != record[i].intdata[intIdx2]) {
+				if (i != depth && dummyDB.tables[table[depth]]->GetData(ret[j]).intdata[it->second.second] != dummyDB.tables[table[i]]->GetData(record[i]).intdata[intIdx2]) {
 					isSkip = 1;
 				}
 			} else if (intGreater.find(column[z]) != intGreater.end()) {
@@ -125,7 +125,7 @@ void done(const vector<string>& table, map<string, int>& m,
 						break;
 					}
 				}
-				if (i != depth && ret[j].intdata[it->second.second] <= record[i].intdata[intIdx2]) {
+				if (i != depth && dummyDB.tables[table[depth]]->GetData(ret[j]).intdata[it->second.second] <= dummyDB.tables[table[i]]->GetData(record[i]).intdata[intIdx2]) {
 					isSkip = 1;
 				}
 			} else if (intLess.find(column[z]) != intLess.end()) {
@@ -140,7 +140,7 @@ void done(const vector<string>& table, map<string, int>& m,
 						break;
 					}
 				}
-				if (i != depth && ret[j].intdata[it->second.second] >= record[i].intdata[intIdx2]) {
+				if (i != depth && dummyDB.tables[table[depth]]->GetData(ret[j]).intdata[it->second.second] >= dummyDB.tables[table[i]]->GetData(record[i]).intdata[intIdx2]) {
 					isSkip = 1;
 				}
 			} else if (strEqual.find(column[z]) != strEqual.end()) {
@@ -155,7 +155,7 @@ void done(const vector<string>& table, map<string, int>& m,
 						break;
 					}
 				}
-				if (i != depth && ret[j].strdata[it->second.second] != record[i].strdata[strIdx2]) {
+				if (i != depth && dummyDB.tables[table[depth]]->GetData(ret[j]).strdata[it->second.second] != dummyDB.tables[table[i]]->GetData(record[i]).strdata[strIdx2]) {
 					isSkip = 1;
 				}
 			}
@@ -164,16 +164,16 @@ void done(const vector<string>& table, map<string, int>& m,
 		for (int z = 0; z < pos.size(); z++) {
 			auto it1 = col2table_intIdx.find(pos[z].first);
 			if (it1 != col2table_intIdx.end() && it1->second.first == table[depth]) {
-				char* num = itoa(ret[j].intdata[it1->second.second]);
+				char* num = itoa(dummyDB.tables[table[depth]]->GetData(ret[j]).intdata[it1->second.second]);
 				row[pos[z].second] = num;
 				delete num;
 			}
 			auto it2 = col2table_strIdx.find(pos[z].first);
 			if (it2 != col2table_strIdx.end() && it2->second.first == table[depth]) {
-				row[pos[z].second] = ret[j].strdata[it2->second.second];
+				row[pos[z].second] = dummyDB.tables[table[depth]]->GetData(ret[j]).strdata[it2->second.second];
 			}
 		}
-		record.push_back(ret[j]); 
+		record.push_back(ret[j]);
 		done(table, m, depth + 1, row, record);
 		record.pop_back();
 	}
@@ -226,8 +226,13 @@ void create(const string& tablename, const vector<string>& column,
 		colData.push_back(vector<string>());
 	}
 	// be careful that here, we assume, are only int keys
-	nIntKey = key.size();
+	nIntKey = nInt;
+	nStrKey = nStr;
+//#ifdef USE_DB_CXX
+	//unique_ptr<BaseTable> table(new BDBTable(tablename, nInt, nIntKey, nStr, nStrKey, StringTypeLen));
+//#else
 	unique_ptr<BaseTable> table(new DummyTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
+//#endif
 	dummyDB.CreateTable(table, tablename);
 }
 
@@ -257,13 +262,14 @@ void train(const vector<string>& query, const vector<double>& weight)
 			table.push_back(token[i]);
 		}
 		if (i >= token.size() && table.size() == 1) {
-			prepareProject = true;
+			//prepareProject = true;
 		}
 	}
 }
 
 void load(const string& tableName, const vector<string>& row)
 {
+	
 	vector<string>& type = table2type[tableName];
 	vector<string>& column = table2name[tableName];
 	// key processing reserved
@@ -322,8 +328,8 @@ void execute(const string& sql)
 		table.push_back(token[i]);
 	}
 	if (i >= token.size() && table.size() == 1 && output.size() == 2) {
-		ProjectDone(table[0], output);
-		return;
+		//ProjectDone(table[0], output);
+		//return;
 	}
 	for (i++; i < token.size(); i++) {
 		if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
@@ -371,7 +377,7 @@ void execute(const string& sql)
 	row.clear();
 	row.resize(output.size(), "");
 	
-	vector<DummyItem> record;
+	vector<int> record;
 	done(table, m, 0, row, record);
 }
 

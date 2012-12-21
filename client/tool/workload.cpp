@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <string>
 
-#include "../include/client.h"
+#include "../client.h"
 
 using namespace std;
 

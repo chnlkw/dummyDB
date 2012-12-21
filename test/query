@@ -1,5 +1,0 @@
-4
-SELECT o_date , c_data , c_first , c_last , ol_amount , i_name FROM _order , customer , order_line , item ;
-SELECT i_name , i_data FROM item ;
-SELECT i_name , i_data , i_id , ol_o_id , ol_number FROM item , order_line , WHERE i_id > ol_number ;
-SELECT test1_num1 , test1_num2 FROM data01 ;

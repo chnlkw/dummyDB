@@ -15,23 +15,23 @@ struct DummyItem
 
 struct DummyQuery
 {
-private:
+public:
 	struct IntRangeQuery
 	{
 		int low, high; // close interval [low, high]
 	};
-	map<int, IntRangeQuery> intrange;
+	multimap<int, IntRangeQuery> intrange;
 	map<int, int> intequal;
 	map<int, string> strequal;
 public:
 	void create(int col, int val) {
-		intequal[col] = val;	
+		intequal[col] = val;
 	}
 	void create(int col, int low, int high) {
-		IntRangeQuery *range = new IntRangeQuery;
-		range->low = low;
-		range->high = high;
-		intrange[col] = *range;
+		IntRangeQuery range;
+		range.low = low;
+		range.high = high;
+		intrange.insert(make_pair(col, range));
 	}
 	void create(int col, string str) {
 		strequal[col] = str;
@@ -63,31 +63,34 @@ protected:
 	int nInt, nIntKey;
 	int nStr, nStrKey;
 	vector<int> StringTypeLen;
+	vector<DummyItem> data;
 public:
 	BaseTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen) :
 		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), StringTypeLen(StringTypeLen)
 	{
 	}
+	virtual ~BaseTable()
+	{
+	}
 	virtual bool Insert(DummyItem &item) = 0;
 
-
-	virtual vector<DummyItem> Get() = 0;
-	virtual vector<DummyItem> Get(DummyQuery& q) = 0;
-	virtual vector<DummyItem> GetIntKey(int idx, int key) = 0;
-	virtual vector<DummyItem> GetIntKey(int idx, int key, DummyQuery &q) = 0;
-	virtual vector<DummyItem> GetIntKeyRange(int idx, int low, int high) = 0;
-	virtual vector<DummyItem> GetIntKeyRange(int idx, int low, int high, DummyQuery &q) = 0;
-	virtual vector<DummyItem> GetStrKey(int idx, string str) = 0;
-	virtual vector<DummyItem> GetStrKey(int idx, string str, DummyQuery &q) = 0;
+	virtual DummyItem& GetData(int index);
+	virtual vector<int> Get() = 0;
+	virtual vector<int> Get(DummyQuery& q) = 0;
+	virtual vector<int> GetIntKey(int idx, int key) = 0;
+	virtual vector<int> GetIntKey(int idx, int key, DummyQuery &q) = 0;
+	virtual vector<int> GetIntKeyRange(int idx, int low, int high) = 0;
+	virtual vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q) = 0;
+	virtual vector<int> GetStrKey(int idx, string str) = 0;
+	virtual vector<int> GetStrKey(int idx, string str, DummyQuery &q) = 0;
 
 };
 
 class DummyTable : public BaseTable
 {
 public:
-	vector<DummyItem> data;
-	vector<multimap<int, DummyItem>> IntKey;
-	vector<unordered_map<string, DummyItem>> StrKey;
+	vector<multimap<int, int>> IntKey;
+	vector<unordered_multimap<string, int>> StrKey;
 	/*DummyTable(int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen, map<string, int>& intCol, map<string, int>& strCol) :
 		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), intCol(intCol), strCol(strCol), StringTypeLen(StringTypeLen),
 		IntKey(nIntKey), StrKey(nStrKey)
@@ -98,30 +101,32 @@ public:
 	{
 		// be careful that here, we assume, keys are always at the first place
 		for (int i = 0; i < nIntKey; i++) {
-			IntKey.push_back(multimap<int, DummyItem>());
+			IntKey.push_back(multimap<int, int>());
 		}
 		for (int i = 0; i < nStrKey; i++) {
-			StrKey.push_back(unordered_map<string, DummyItem>());
+			StrKey.push_back(unordered_multimap<string, int>());
 		}
 	}
 	bool Insert(DummyItem &item)
-	{
-		data.push_back(item);
-		for (int i = 0; i < nIntKey; i++)
-			IntKey[i].insert(make_pair(item.intdata[i], item));
+	{		
+		for (int i = 0; i < nIntKey; i++) {
+			IntKey[i].insert(make_pair(item.intdata[i], data.size()));
+		}
 		for (int i = 0; i < nStrKey; i++)
-			StrKey[i].insert(make_pair(item.strdata[i], item));
+			StrKey[i].insert(make_pair(item.strdata[i], data.size()));
+		data.push_back(item);
 		return true;
 	}
 
-	vector<DummyItem> Get();
-	vector<DummyItem> Get(DummyQuery& q);
-	vector<DummyItem> GetIntKey(int idx, int key);
-	vector<DummyItem> GetIntKey(int idx, int key, DummyQuery &q);
-	vector<DummyItem> GetIntKeyRange(int idx, int low, int high);
-	vector<DummyItem> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
-	vector<DummyItem> GetStrKey(int idx, string str);
-	vector<DummyItem> GetStrKey(int idx, string str, DummyQuery& q);
+	DummyItem& GetData(int index);
+	vector<int> Get();
+	vector<int> Get(DummyQuery& q);
+	vector<int> GetIntKey(int idx, int key);
+	vector<int> GetIntKey(int idx, int key, DummyQuery &q);
+	vector<int> GetIntKeyRange(int idx, int low, int high);
+	vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
+	vector<int> GetStrKey(int idx, string str);
+	vector<int> GetStrKey(int idx, string str, DummyQuery& q);
 
 	template <class It>
 	class Cursor
@@ -146,7 +151,7 @@ public:
 		}
 	};
 
-	auto cursor() -> Cursor<vector<DummyItem>::iterator>
+	/*auto cursor() -> Cursor<vector<DummyItem>::iterator>
 	{
 		return Cursor<vector<DummyItem>::iterator>(data.begin(), data.end());
 	}
@@ -163,7 +168,7 @@ public:
 	{
 		auto range = StrKey[idx].equal_range(str);
 		return Cursor<unordered_map<string, DummyItem>::iterator>(range.first, range.second);
-	}
+	}*/
 
 };
 

@@ -170,17 +170,25 @@ public:
 
 };
 
-class DummyDB
+class BaseDB
 {
 public:
 	int nTable;
 	map<string, unique_ptr<BaseTable>> tables;
-	DummyDB() : nTable(0)
+	BaseDB()
 	{
 	}
-	int CreateTable(unique_ptr<BaseTable> &table, const string& name)
+	virtual int CreateTable(unique_ptr<BaseTable> &table, const string& name)
 	{
 		tables[name].swap(table);
 		return nTable++;
+	}
+};
+
+class DummyDB : public BaseDB
+{
+public:
+	DummyDB()
+	{
 	}
 };

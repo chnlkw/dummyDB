@@ -4,7 +4,15 @@
 #include "dummydb.h"
 #include "utils.h"
 
+#ifdef WINDOWS
+
+#include "../db_win64/db_cxx.h"
+
+#else
+
 #include "./db_cxx.h"
+
+#endif
 
 using namespace std;
 
@@ -57,11 +65,14 @@ private:
 
 	Db* NewDB(string name, bool isduplicated = false);
 
+	static unique_ptr<DbEnv> dbenv;
+
 public:
 	BDBTable(string tablename, int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
 		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen), totalKeys(0)
 	{
-		tablename = "data/db_" + tablename;
+
+		tablename = "db_" + tablename;
 		PrimaryKey.reset(NewDB(tablename + ".primarykey", false));
 		for (int i = 0; i < nIntKey; i++)
 		{

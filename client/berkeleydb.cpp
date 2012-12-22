@@ -1,5 +1,7 @@
 #include "berkeleydb.h"
 
+unique_ptr<DbEnv> BDBTable::dbenv;
+
 DummyItem to_item(Dbt &d, int nInt, int nStr)
 {
 	DummyItem item;
@@ -20,7 +22,14 @@ DummyItem to_item(Dbt &d, int nInt, int nStr)
 
 Db* BDBTable::NewDB(string name, bool isduplicated)
 {
-	Db* db = new Db(nullptr, 0);
+	if (dbenv.get() == nullptr)
+	{
+		dbenv.reset(new DbEnv(0));
+		dbenv->set_cachesize(0, 512*1024*1024, 1);
+		dbenv->open("data/", DB_CREATE | DB_INIT_MPOOL, 0);
+	}
+	Db* db = new Db(dbenv.get(), 0);
+	db->set_pagesize(65536);
 	if (isduplicated)
 	{
 		db->set_flags(DB_DUPSORT);

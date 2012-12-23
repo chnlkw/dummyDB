@@ -8,7 +8,7 @@
 #include <ctime>
 
 #include "./hash.h"
-#include "./client/client.h"
+#include "./client.h"
 
 #define PATH		"test/"
 #define SCHEMA		(PATH "schema")

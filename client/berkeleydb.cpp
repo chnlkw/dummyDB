@@ -59,10 +59,10 @@ bool BDBTable::Insert(DummyItem &dummyitem)
 	totalKeys++;
 	return true;
 }
-
-vector<DummyItem> BDBTable::Get()
+/*
+vector<int> BDBTable::Get()
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
 	PrimaryKey->cursor(NULL, &cursorp, 0);
 	Dbt key, data;
@@ -70,16 +70,16 @@ vector<DummyItem> BDBTable::Get()
 	while ((ret = cursorp->get(&key, &data, DB_NEXT)) == 0)
 	{
 		int k = *(int*)key.get_data();
-		DummyItem item = to_item(data, nInt, nStr);
-		answer.push_back(item);
+	//	DummyItem item = to_item(data, nInt, nStr);
+		answer.push_back(k);
 	}
 	cursorp->close();
 	return answer;
 }
 
-vector<DummyItem> BDBTable::Get(DummyQuery& q)
+vector<int> BDBTable::Get(DummyQuery& q)
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
 	PrimaryKey->cursor(NULL, &cursorp, 0);
 	Dbt key, data;
@@ -89,53 +89,52 @@ vector<DummyItem> BDBTable::Get(DummyQuery& q)
 		int k = *(int*)key.get_data();
 		DummyItem item = to_item(data, nInt, nStr);
 		if (q.match(item))
-			answer.push_back(item);
+			answer.push_back(k);
 	}
 	cursorp->close();
 	return answer;
 }
 
-vector<DummyItem> BDBTable::GetIntKey(int idx, int intkey)
+vector<int> BDBTable::GetIntKey(int idx, int intkey)
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
-	PrimaryKey->cursor(NULL, &cursorp, 0);
+	IntKey[idx]->cursor(NULL, &cursorp, 0);
 	Dbt key(&intkey, sizeof(int)), data;
 	int ret = cursorp->get(&key, &data, DB_SET);
 	while (ret != DB_NOTFOUND)
 	{
-		int k = *(int*)key.get_data();
-		DummyItem item = to_item(data, nInt, nStr);
-		//if (q.match(item))
-			answer.push_back(item);
+		int k = *(int*)data.get_data();
+		answer.push_back(k);
 		ret = cursorp->get(&key, &data, DB_NEXT_DUP);
 	}
 	cursorp->close();
 	return answer;
 }
 
-vector<DummyItem> BDBTable::GetIntKey(int idx, int intkey, DummyQuery& q)
+vector<int> BDBTable::GetIntKey(int idx, int intkey, DummyQuery& q)
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
-	PrimaryKey->cursor(NULL, &cursorp, 0);
+	IntKey[idx]->cursor(NULL, &cursorp, 0);
 	Dbt key(&intkey, sizeof(int)), data;
 	int ret = cursorp->get(&key, &data, DB_SET);
 	while (ret != DB_NOTFOUND)
 	{
-		int k = *(int*)key.get_data();
+		int k = *(int*)data.get_data();
+		Dbt key2(&k, sizeof(int)), data;
 		DummyItem item = to_item(data, nInt, nStr);
 		if (q.match(item))
-			answer.push_back(item);
+			answer.push_back(k);
 		ret = cursorp->get(&key, &data, DB_NEXT_DUP);
 	}
 	cursorp->close();
 	return answer;
 }
 
-vector<DummyItem> BDBTable::GetIntKeyRange(int idx, int low, int high)
+vector<int> BDBTable::GetIntKeyRange(int idx, int low, int high)
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
 	PrimaryKey->cursor(NULL, &cursorp, 0);
 	Dbt key(&low, sizeof(int)), data;
@@ -154,9 +153,9 @@ vector<DummyItem> BDBTable::GetIntKeyRange(int idx, int low, int high)
 	return answer;
 }
 
-vector<DummyItem> BDBTable::GetIntKeyRange(int idx, int low, int high, DummyQuery& q)
+vector<int> BDBTable::GetIntKeyRange(int idx, int low, int high, DummyQuery& q)
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
 	PrimaryKey->cursor(NULL, &cursorp, 0);
 	Dbt key(&low, sizeof(int)), data;
@@ -176,9 +175,9 @@ vector<DummyItem> BDBTable::GetIntKeyRange(int idx, int low, int high, DummyQuer
 }
 
 
-vector<DummyItem> BDBTable::GetStrKey(int idx, string str)
+vector<int> BDBTable::GetStrKey(int idx, string str)
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
 	PrimaryKey->cursor(NULL, &cursorp, 0);
 	Dbt key((char*)str.c_str(), str.length() + 1), data;
@@ -195,9 +194,9 @@ vector<DummyItem> BDBTable::GetStrKey(int idx, string str)
 	return answer;
 }
 
-vector<DummyItem> BDBTable::GetStrKey(int idx, string str, DummyQuery& q)
+vector<int> BDBTable::GetStrKey(int idx, string str, DummyQuery& q)
 {
-	vector<DummyItem> answer;
+	vector<int> answer;
 	Dbc *cursorp;
 	PrimaryKey->cursor(NULL, &cursorp, 0);
 	Dbt key((char*)str.c_str(), str.length() + 1), data;
@@ -213,3 +212,4 @@ vector<DummyItem> BDBTable::GetStrKey(int idx, string str, DummyQuery& q)
 	cursorp->close();
 	return answer;
 }
+*/

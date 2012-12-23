@@ -100,7 +100,6 @@ restart_1:
 	fclose(fin);
 
 	/* Load initial data */
-
 	for (i = 0; i < tables.size(); i++) {
 		sprintf(buf, PATH "%s.data", tables[i].c_str());
 		fin = fopen(buf, "r");
@@ -120,7 +119,6 @@ restart_1:
 		}
 		if (row.size() > 0)
 			load(tables[i], row);
-
 		fclose(fin);
 	}
 

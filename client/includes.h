@@ -13,10 +13,17 @@
 #include <sstream>
 #include <utility>
 #include <algorithm>
-#include <unistd.h>
+#include <functional>
+
 #include <iostream>
 
 #include "defs.h"
+
+#ifndef WINDOWS
+
+#include <unistd.h>
+
+#endif
 
 #ifdef USE_DB_CXX
 

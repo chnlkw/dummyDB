@@ -69,12 +69,11 @@ public:
 		nInt(nInt), nIntKey(nIntKey), nStr(nStr), nStrKey(nStrKey), StringTypeLen(StringTypeLen)
 	{
 	}
-	virtual ~BaseTable()
-	{
-	}
+	virtual ~BaseTable(){};
 	virtual bool Insert(DummyItem &item) = 0;
+	virtual const DummyItem& GetData(int index) const = 0;
 
-	virtual DummyItem& GetData(int index);
+	/*
 	virtual vector<int> Get() = 0;
 	virtual vector<int> Get(DummyQuery& q) = 0;
 	virtual vector<int> GetIntKey(int idx, int key) = 0;
@@ -83,6 +82,37 @@ public:
 	virtual vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q) = 0;
 	virtual vector<int> GetStrKey(int idx, string str) = 0;
 	virtual vector<int> GetStrKey(int idx, string str, DummyQuery &q) = 0;
+	*/
+
+	class Cursor
+	{
+	private:
+		DummyQuery q;
+		DummyItem data;
+	public:
+		Cursor(DummyQuery q = DummyQuery()) : q(q) {}
+		~Cursor() {}
+		virtual bool HasNext() { return false; }
+		virtual DummyItem && NextItem() { return DummyItem(); }
+		void Next()
+		{
+			while (HasNext())
+			{
+				data = NextItem();
+				if (q.match(data))
+					break;
+			}
+		}
+		DummyItem & getdata()
+		{
+			return data;
+		}
+	};
+
+	virtual Cursor cursor(DummyQuery q = DummyQuery()) = 0;
+	virtual Cursor cursor(int idx, int low, int high, DummyQuery q = DummyQuery()) = 0;
+	virtual Cursor cursor(int idx, int intkey, DummyQuery q = DummyQuery()) = 0;
+	virtual Cursor cursor(int idx, string str, DummyQuery q = DummyQuery()) = 0;
 
 };
 
@@ -118,71 +148,85 @@ public:
 		return true;
 	}
 
-	DummyItem& GetData(int index);
-	vector<int> Get();
+	virtual const DummyItem& GetData(int index) const override;
+	/*vector<int> Get();
 	vector<int> Get(DummyQuery& q);
 	vector<int> GetIntKey(int idx, int key);
 	vector<int> GetIntKey(int idx, int key, DummyQuery &q);
 	vector<int> GetIntKeyRange(int idx, int low, int high);
 	vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
 	vector<int> GetStrKey(int idx, string str);
-	vector<int> GetStrKey(int idx, string str, DummyQuery& q);
+	vector<int> GetStrKey(int idx, string str, DummyQuery& q);*/
 
-	template <class It>
-	class Cursor
+	template <typename It, typename Function>
+	class DummyCursor : public Cursor
 	{
-		It iter, iter_end;
+	private:
+		It it, ed;
+		Function f;
 	public:
-		Cursor(It iter, It iter_end) :
-			iter(iter), iter_end(iter_end)
+		DummyCursor(It head, It tail, Function &&f, DummyQuery q = DummyQuery())
+			: it(head), ed(tail), f(f), Cursor(q)
 		{
 		}
 		bool HasNext()
 		{
-			return iter != iter_end;
+			return it != ed;
 		}
-		void Next()
+		DummyItem && NextItem()
 		{
-			iter++;
-		}
-		auto Data() -> decltype(*iter)
-		{
-			return *iter;
+			DummyItem ret = f(it);
+			it++;
+			return move(ret);
 		}
 	};
 
-	/*auto cursor() -> Cursor<vector<DummyItem>::iterator>
+	virtual Cursor cursor(DummyQuery q = DummyQuery()) override
 	{
-		return Cursor<vector<DummyItem>::iterator>(data.begin(), data.end());
+		typedef decltype(data.begin()) It;
+		auto fun = [](It it) { return *it; };
+		return DummyCursor<It, decltype(fun)>(data.begin(), data.end(), move(fun), q);
 	}
-	auto cursor(int idx, int low, int high) -> Cursor<multimap<int, DummyItem>::iterator>
+	virtual Cursor cursor(int idx, int low, int high, DummyQuery q = DummyQuery()) override
 	{
-		return Cursor<multimap<int, DummyItem>::iterator>(IntKey[idx].lower_bound(low), IntKey[idx].upper_bound(high));
+		typedef decltype(IntKey[idx].begin()) It;
+		auto fun = [this](It it) { return data[it->second]; };
+		return DummyCursor<It, decltype(fun)>(IntKey[idx].lower_bound(low), IntKey[idx].upper_bound(high), move(fun), q);
 	}
-	auto cursor(int idx, int intkey) -> Cursor<multimap<int, DummyItem>::iterator>
+	virtual Cursor cursor(int idx, int intkey, DummyQuery q = DummyQuery()) override
 	{
-		auto range = IntKey[idx].equal_range(intkey);
-		return Cursor<multimap<int, DummyItem>::iterator>(range.first, range.second);
+		typedef decltype(IntKey[idx].begin()) It;
+		auto fun = [this](It it) { return data[it->second]; };
+		return DummyCursor<It, decltype(fun)>(IntKey[idx].lower_bound(intkey), IntKey[idx].upper_bound(intkey), move(fun), q);
 	}
-	auto cursor(int idx, string str) -> Cursor<unordered_map<string, DummyItem>::iterator>
+	virtual Cursor cursor(int idx, string strkey, DummyQuery q = DummyQuery()) override
 	{
-		auto range = StrKey[idx].equal_range(str);
-		return Cursor<unordered_map<string, DummyItem>::iterator>(range.first, range.second);
-	}*/
+		typedef decltype(StrKey[idx].begin()) It;
+		auto fun = [this](It it) { return data[it->second]; };
+		return DummyCursor<It, decltype(fun)>(StrKey[idx].lower_bound(strkey), StrKey[idx].upper_bound(strkey), move(fun), q);
+	}
 
 };
 
-class DummyDB
+class BaseDB
 {
 public:
 	int nTable;
 	map<string, unique_ptr<BaseTable>> tables;
-	DummyDB() : nTable(0)
+	BaseDB()
 	{
 	}
-	int CreateTable(unique_ptr<BaseTable> &table, const string& name)
+	virtual int CreateTable(unique_ptr<BaseTable> &table, const string& name)
 	{
 		tables[name].swap(table);
 		return nTable++;
+	}
+};
+
+class DummyDB : public BaseDB
+{
+public:
+	DummyDB()
+	{
 	}
 };

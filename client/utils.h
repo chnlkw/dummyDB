@@ -1,9 +1,7 @@
 #include "includes.h"
 
-template <class T>
-std::string tostring(T data)
+namespace utils
 {
-	std::stringstream ss;
-	ss << data;
-	return ss.str();
-}
+	void split_csv(const char *buf, std::vector<std::string>& token);
+	void tokenize(const char *buf, std::vector<std::string>& token);
+};

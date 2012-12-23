@@ -14,5 +14,5 @@
 #execute and template files
 run
 data/
-
-
+test*
+db/

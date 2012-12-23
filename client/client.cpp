@@ -1,11 +1,10 @@
-#include "client.h"
-#include "tool/tokenize.h"
-#include "tool/split_csv.h"
 
 #include "dummydb.h"
+#include "utils.h"
 //#include "berkeleydb.h"
 
 using namespace std;
+using namespace utils;
 
 map<string, vector<string> > table2name;
 map<string, vector<string> > table2type;
@@ -392,7 +391,12 @@ int next(char *row)
 	 * This is for debug only. You should avoid unnecessary output
 	 * in your submission, which will hurt the performance.
 	 */
-	//printf("%s\n", row);
+
+
+#ifdef PRINT_ROW
+	printf("%s\n", row);
+#endif
+
 
 	return (1);
 }

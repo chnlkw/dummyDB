@@ -4,7 +4,15 @@
 #include "dummydb.h"
 #include "utils.h"
 
-#include "./db/build_unix/db_cxx.h"
+#ifdef WINDOWS
+
+#include "../db_win64/db_cxx.h"
+
+#else
+
+#include "./db_cxx.h"
+
+#endif
 
 using namespace std;
 
@@ -55,27 +63,24 @@ private:
 	vector<string> DbName;
 	size_t totalKeys;
 
-	Db* NewDB(string name)
-	{
-		Db* db = new Db(nullptr, 0);
-		DbName.push_back(name);
-		db->open(NULL, name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
-		return db;
-	}
+	Db* NewDB(string name, bool isduplicated = false);
+
+	static unique_ptr<DbEnv> dbenv;
 
 public:
 	BDBTable(string tablename, int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
 		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen), totalKeys(0)
 	{
+
 		tablename = "db_" + tablename;
-		PrimaryKey.reset(NewDB(tablename + ".primarykey"));
+		PrimaryKey.reset(NewDB(tablename + ".primarykey", false));
 		for (int i = 0; i < nIntKey; i++)
 		{
-			IntKey.emplace_back(NewDB(tablename + ".intkey." + tostring(i)));
+			IntKey.emplace_back(NewDB(tablename + ".intkey." + to_string(i), true));
 		}
 		for (int i = 0; i < nStrKey; i++)
 		{
-			StrKey.emplace_back(NewDB(tablename + ".strkey." + tostring(i)));
+			StrKey.emplace_back(NewDB(tablename + ".strkey." + to_string(i), true));
 		}
 	}
 
@@ -88,101 +93,18 @@ public:
 			db->close(0);
 	}
 
-	DummyItem to_item(Dbt &d, int nInt, int nStr)
-	{
-		DummyItem item;
-		int * p = (int*)d.get_data();
-		for (int i = 0; i < nInt; i++)
-		{
-			item.intdata.push_back(*p);
-			p++;
-		}
-		char *s = (char*)p;
-		for (int i = 0; i < nStr; i++)
-		{
-			item.strdata.push_back(s);
-			s += strlen(s) + 1;
-		}
-		return item;
-	}
-	bool Insert(DummyItem &dummyitem)
-	{
-/*		data.push_back(item);
-		for (int i = 0; i < nIntKey; i++)
-			IntKey[i].insert(make_pair(item.intdata[i], item));
-		for (int i = 0; i < nStrKey; i++)
-			StrKey[i].insert(make_pair(item.strdata[i], item));*/
-		BDBItem bdbitem(dummyitem);
-		Dbt data = bdbitem.dbt();
-		totalKeys++;
-		Dbt key(&totalKeys, sizeof(totalKeys));
-		int ret = PrimaryKey->put(NULL, &key, &data, 0);
-		for (int i = 0; i < nIntKey; i++)
-		{
-			Dbt index(&dummyitem.intdata[i], sizeof(int));
-			IntKey[i]->put(NULL, &index, &key, 0);
-		}
-		for (int i = 0; i < nStrKey; i++)
-		{
-			Dbt index((char*)dummyitem.strdata[i].c_str(), dummyitem.strdata[i].length()+1);
-			StrKey[i]->put(NULL, &index, &key, 0);
-		}
-		return true;
-	}
 
+	bool Insert(DummyItem &dummyitem);
+	/*
+	vector<int> Get();
+	vector<int> Get(DummyQuery& q);
+	vector<int> GetIntKey(int idx, int key);
+	vector<int> GetIntKey(int idx, int key, DummyQuery &q);
+	vector<int> GetIntKeyRange(int idx, int low, int high);
+	vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
+	vector<int> GetStrKey(int idx, string str);
+	vector<int> GetStrKey(int idx, string str, DummyQuery& q);*/
 
-	vector<DummyItem> Get();
-	vector<DummyItem> Get(DummyQuery& q);
-	vector<DummyItem> GetIntKey(int idx, int key);
-	vector<DummyItem> GetIntKey(int idx, int key, DummyQuery &q);
-	vector<DummyItem> GetIntKeyRange(int idx, int low, int high);
-	vector<DummyItem> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
-	vector<DummyItem> GetStrKey(int idx, string str);
-	vector<DummyItem> GetStrKey(int idx, string str, DummyQuery& q);
-/*
-	template <class It>
-	class Cursor
-	{
-		It iter, iter_end;
-	public:
-		Cursor(It iter, It iter_end) :
-			iter(iter), iter_end(iter_end)
-		{
-		}
-		bool HasNext()
-		{
-			return iter != iter_end;
-		}
-		void Next()
-		{
-			iter++;
-		}
-		auto Data() -> decltype(*iter)
-		{
-			return *iter;
-		}
-	};*/
-/*
-
-	auto cursor() -> Cursor<vector<DummyItem>::iterator>
-	{
-		return Cursor<vector<DummyItem>::iterator>(data.begin(), data.end());
-	}
-	auto cursor(int idx, int low, int high) -> Cursor<multimap<int, DummyItem>::iterator>
-	{
-		return Cursor<multimap<int, DummyItem>::iterator>(IntKey[idx].lower_bound(low), IntKey[idx].upper_bound(high));
-	}
-	auto cursor(int idx, int intkey) -> Cursor<multimap<int, DummyItem>::iterator>
-	{
-		auto range = IntKey[idx].equal_range(intkey);
-		return Cursor<multimap<int, DummyItem>::iterator>(range.first, range.second);
-	}
-	auto cursor(int idx, string str) -> Cursor<unordered_map<string, DummyItem>::iterator>
-	{
-		auto range = StrKey[idx].equal_range(str);
-		return Cursor<unordered_map<string, DummyItem>::iterator>(range.first, range.second);
-	}
-*/
 
 };
 

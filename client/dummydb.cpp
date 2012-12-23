@@ -1,9 +1,9 @@
 #include "dummydb.h"
 
-DummyItem& DummyTable::GetData(int index) {
+const DummyItem& DummyTable::GetData(int index) const {
 	return data[index];
 }
-
+/*
 vector<int> DummyTable::Get()
 {
 	vector<int> ret;
@@ -157,3 +157,4 @@ vector<int> DummyTable::GetStrKey(int idx, string str, DummyQuery& q)
 	}
 	return ret;
 }
+*/

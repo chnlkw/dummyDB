@@ -101,15 +101,41 @@ public:
 	}
 
 	bool Insert(DummyItem &dummyitem);
-	/*
-	vector<int> Get();
-	vector<int> Get(DummyQuery& q);
-	vector<int> GetIntKey(int idx, int key);
-	vector<int> GetIntKey(int idx, int key, DummyQuery &q);
-	vector<int> GetIntKeyRange(int idx, int low, int high);
-	vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
-	vector<int> GetStrKey(int idx, string str);
-	vector<int> GetStrKey(int idx, string str, DummyQuery& q);*/
+
+	virtual const int Count() override
+	{
+		return totalKeys;
+	}
+	virtual const int CountIntKey(int idx, int key) override
+	{
+		Dbt dbt(&key, sizeof(int));
+		DB_KEY_RANGE keyrange;
+		IntKey[idx]->key_range(NULL, &dbt, &keyrange, 0);
+		int ret = (int) (totalKeys * keyrange.equal);
+		return ret;
+	}
+	virtual const int CountIntKeyRange(int idx, int low, int high) override
+	{
+		Dbt dbt(&low, sizeof(int));
+		DB_KEY_RANGE keyrange;
+		IntKey[idx]->key_range(NULL, &dbt, &keyrange, 0);
+		int c1 = (int) (totalKeys * keyrange.less);
+		dbt.set_data(&high);
+		IntKey[idx]->key_range(NULL, &dbt, &keyrange, 0);
+		int c2 = (int) (totalKeys * keyrange.equal);
+		int c3 = (int) (totalKeys * keyrange.less);
+		int ret = c2 + c3 - c1;
+		return ret;
+	}
+	virtual const int CountStrKey(int idx, string str) override
+	{
+		Dbt dbt((char*)str.c_str(), str.length() + 1);
+		DB_KEY_RANGE keyrange;
+		StrKey[idx]->key_range(NULL, &dbt, &keyrange, 0);
+		int ret = (int) (totalKeys * keyrange.equal);
+		return ret;
+	}
+
 
 	virtual const DummyItem& GetData(int index) const override
 	{

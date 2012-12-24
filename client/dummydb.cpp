@@ -9,7 +9,7 @@ const DummyItem& DummyTable::GetData(int index) const {
 const int DummyTable::GetDataSize() const {
 	return data.size();
 }
-
+/*
 const multimap<int, int>& DummyTable::GetIntKey(int index) {
 	return IntKey[index];
 }
@@ -17,7 +17,7 @@ const multimap<int, int>& DummyTable::GetIntKey(int index) {
 const unordered_multimap<string, int>& DummyTable::GetStrKey(int index) {
 	return StrKey[index];
 }
-
+*/
 CursorPointer DummyTable::cursor(DummyQuery q)
 {
 	typedef decltype(data.begin()) It;

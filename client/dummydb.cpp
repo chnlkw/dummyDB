@@ -1,7 +1,46 @@
 #include "dummydb.h"
 
+typedef unique_ptr<BaseTable::Cursor> CursorPointer;
+
 const DummyItem& DummyTable::GetData(int index) const {
 	return data[index];
+}
+
+const int DummyTable::GetDataSize() const {
+	return data.size();
+}
+
+const multimap<int, int>& DummyTable::GetIntKey(int index) {
+	return IntKey[index];
+}
+
+const unordered_multimap<string, int>& DummyTable::GetStrKey(int index) {
+	return StrKey[index];
+}
+
+CursorPointer DummyTable::cursor(DummyQuery q)
+{
+	typedef decltype(data.begin()) It;
+	auto fun = [](It it) { return *it; };
+	return CursorPointer(new DummyCursor<It, decltype(fun)>(data.begin(), data.end(), move(fun), q));
+}
+CursorPointer DummyTable::cursor(int idx, int low, int high, DummyQuery q)
+{
+	typedef decltype(IntKey[idx].begin()) It;
+	auto fun = [this](It it) { return data[it->second]; };
+	return CursorPointer(new DummyCursor<It, decltype(fun)>(IntKey[idx].lower_bound(low), IntKey[idx].upper_bound(high), move(fun), q));
+}
+CursorPointer DummyTable::cursor(int idx, int intkey, DummyQuery q)
+{
+	typedef decltype(IntKey[idx].begin()) It;
+	auto fun = [this](It it) { return data[it->second]; };
+	return CursorPointer(new DummyCursor<It, decltype(fun)>(IntKey[idx].lower_bound(intkey), IntKey[idx].upper_bound(intkey), move(fun), q));
+}
+CursorPointer DummyTable::cursor(int idx, string strkey, DummyQuery q)
+{
+	typedef decltype(StrKey[idx].begin()) It;
+	auto fun = [this](It it) { return data[it->second]; };
+	return CursorPointer(new DummyCursor<It, decltype(fun)>(StrKey[idx].equal_range(strkey).first, StrKey[idx].equal_range(strkey).second, move(fun), q));
 }
 /*
 vector<int> DummyTable::Get()

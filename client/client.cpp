@@ -1,6 +1,6 @@
 #include "dummydb.h"
 #include "utils.h"
-//#include "berkeleydb.h"
+#include "berkeleydb.h"
 
 using namespace std;
 
@@ -177,7 +177,7 @@ void done(const vector<string>& table, map<string, int>& m,
 		}
 	}
 
-	for (ret->Next(); !ret->empty ; ret->Next()) {
+	for (ret->Init(); !ret->Empty() ; ret->Next()) {
 		auto data = ret->getdata();
 		for (int z = 0; z < pos.size(); z++) {
 			auto it1 = col2table_intIdx.find(pos[z].first);
@@ -245,11 +245,11 @@ void create(const string& tablename, const vector<string>& column,
 	// be careful that here, we assume, are only int keys
 	nIntKey = nInt;
 	nStrKey = nStr;
-//#ifdef USE_DB_CXX
-	//unique_ptr<BaseTable> table(new BDBTable(tablename, nInt, nIntKey, nStr, nStrKey, StringTypeLen));
-//#else
+#ifdef USE_DB_CXX
+	unique_ptr<BaseTable> table(new BDBTable(tablename, nInt, nIntKey, nStr, nStrKey, StringTypeLen));
+#else
 	unique_ptr<BaseTable> table(new DummyTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
-//#endif
+#endif
 	dummyDB.CreateTable(table, tablename);
 }
 
@@ -386,14 +386,6 @@ void execute(const string& sql)
 					} else {
 						table2query[tableName].create(intIdx, j, intIdx2, 2);
 					}
-				} else {
-				  if (token[i+1] == "=") {
-						table2query[tableName2].create(intIdx2, j, intIdx, 0);
-					} else if (token[i+1] == ">") {
-						table2query[tableName2].create(intIdx2, j, intIdx, 1);
-					} else {
-						table2query[tableName2].create(intIdx2, j, intIdx, 2);
-					}
 				}
 			}
 			auto it2 = col2table_strIdx.find(token[i]);
@@ -410,8 +402,6 @@ void execute(const string& sql)
 				}
 				if (table[j] == tableName2) {
 					table2query[tableName].create(strIdx, j, strIdx2, 3);
-				} else {
-				  table2query[tableName2].create(strIdx2, j, strIdx, 3);
 				}
 			}
 		}

@@ -91,50 +91,53 @@ public:
 	virtual ~BaseTable(){};
 	virtual bool Insert(DummyItem &item) = 0;
 	virtual const DummyItem& GetData(int index) const = 0;
-	virtual const int GetDataSize() const = 0;
 	virtual const multimap<int, int>& GetIntKey(int index) = 0;
 	virtual const unordered_multimap<string, int>& GetStrKey(int index) = 0;
 
-	/*
-	virtual vector<int> Get() = 0;
-	virtual vector<int> Get(DummyQuery& q) = 0;
-	virtual vector<int> GetIntKey(int idx, int key) = 0;
-	virtual vector<int> GetIntKey(int idx, int key, DummyQuery &q) = 0;
-	virtual vector<int> GetIntKeyRange(int idx, int low, int high) = 0;
-	virtual vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q) = 0;
-	virtual vector<int> GetStrKey(int idx, string str) = 0;
-	virtual vector<int> GetStrKey(int idx, string str, DummyQuery &q) = 0;
-	*/
+	virtual const int GetDataSize() const = 0;
+	
+	virtual const int Count() { return GetDataSize(); };
+	virtual const int CountIntKey(int idx, int key) = 0;
+	virtual const int CountIntKeyRange(int idx, int low, int high) = 0;
+	virtual const int CountStrKey(int idx, string str) = 0;
+	
 
 	class Cursor
 	{
 	private:
 		DummyQuery q;
 		DummyItem data;
+		virtual bool isEmpty() = 0;
+		bool foundnext;
 	public:
-	        bool empty;
-		Cursor(DummyQuery q = DummyQuery()) : q(q) {
-			empty = true;
-		}
+		Cursor(DummyQuery q = DummyQuery()) : q(q) {}
 		virtual ~Cursor() {}
-		virtual bool HasNext() {return false; }
-		virtual DummyItem  NextItem() { return DummyItem(); }
+		virtual DummyItem NextItem() = 0;
+		void Init()
+		{
+			Next();
+		}
 		void Next()
 		{
-		        empty = true;
-			while (HasNext())
+			foundnext = false;
+			while (!isEmpty())
 			{
 				data = NextItem();
 				if (q.match(data))
 				{
-				        empty = false;
+					foundnext = true;
 					break;
 				}
 			}
 		}
-		DummyItem & getdata()
+		const DummyItem & getdata() const
 		{
+			assert(foundnext);
 			return data;
+		}
+		const bool Empty() const
+		{
+			return !foundnext;
 		}
 	};
 
@@ -167,7 +170,7 @@ public:
 		}
 	}
 	bool Insert(DummyItem &item)
-	{		
+	{
 		for (int i = 0; i < nIntKey; i++) {
 			IntKey[i].insert(make_pair(item.intdata[i], data.size()));
 		}
@@ -181,14 +184,29 @@ public:
 	virtual const int GetDataSize() const override;
 	virtual const multimap<int, int>& GetIntKey(int index) override;
 	virtual const unordered_multimap<string, int>& GetStrKey(int index) override;
-	/*vector<int> Get();
-	vector<int> Get(DummyQuery& q);
-	vector<int> GetIntKey(int idx, int key);
-	vector<int> GetIntKey(int idx, int key, DummyQuery &q);
-	vector<int> GetIntKeyRange(int idx, int low, int high);
-	vector<int> GetIntKeyRange(int idx, int low, int high, DummyQuery &q);
-	vector<int> GetStrKey(int idx, string str);
-	vector<int> GetStrKey(int idx, string str, DummyQuery& q);*/
+
+	template <class T>
+	const int count_range(T range)
+	{
+		int ret = 0;
+		for (auto it = range.first; it != range.second; it++)
+			ret++;
+		return ret;
+	}
+
+	virtual const int CountIntKey(int idx, int key) override
+	{
+		return count_range(IntKey[idx].equal_range(key));
+	}
+	virtual const int CountIntKeyRange(int idx, int low, int high) override
+	{
+		return count_range(make_pair(IntKey[idx].lower_bound(low), IntKey[idx].upper_bound(high)));
+	}
+	virtual const int CountStrKey(int idx, string str) override
+	{
+		return count_range(StrKey[idx].equal_range(str));
+	}
+
 
 	template <typename It, typename Function>
 	class DummyCursor : public Cursor
@@ -201,16 +219,14 @@ public:
 			: it(head), ed(tail), f(f), Cursor(q)
 		{
 		}
-		bool HasNext()
+		virtual bool isEmpty() override
 		{
-//cout << "has next " << (it != ed) << endl;
-			return it != ed;
+			return it == ed;
 		}
 		virtual DummyItem NextItem() override
-		{//cout << "nextitem" << endl;
+		{
 			DummyItem ret = f(it);
 			it++;
-		//	cout << "safe return\n";
 			return ret;
 		}
 	};

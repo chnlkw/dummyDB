@@ -112,38 +112,15 @@ void done(const vector<string>& table, map<string, int>& m,
 		int count = 0;
 		int rank;
 		for (auto it = q.intrange.begin(); it != q.intrange.end(); it++) {
-			int temp;
-			if (it->second.low == INT_MIN) {
-				auto it2 = dummyDB.tables[table[depth]]->GetIntKey(it->first).lower_bound(it->second.high);
-				temp = 0;
-				for(it2--; it2 != dummyDB.tables[table[depth]]->GetIntKey(it->first).begin(); it2--) {
-					temp++;
-				}
-				temp++;
-				if (temp < min) {
-					rank = count;
-					min = temp;
-				}
-			}
-			if (it->second.high == INT_MAX) {
-				auto it2 = dummyDB.tables[table[depth]]->GetIntKey(it->first).lower_bound(it->second.low);
-				temp = 0;
-				for(; it2 != dummyDB.tables[table[depth]]->GetIntKey(it->first).end(); it2++) {
-					temp++;
-				}
-				if (temp < min) {
-					rank = count;
-					min = temp;
-				}
+			const int temp = dummyDB.tables[table[depth]]->CountIntKeyRange(it->first, it->second.low, it->second.high);
+			if (temp < min) {
+				rank = count;
+				min = temp;
 			}
 			count++;
 		}
 		for (auto it = q.intequal.begin(); it != q.intequal.end(); it++) {
-			auto range = dummyDB.tables[table[depth]]->GetIntKey(it->first).equal_range(it->second);
-			int temp = 0;
-			for (auto it2 = range.first; it2 != range.second; it2++) {
-				temp++;
-			}
+			const int temp = dummyDB.tables[table[depth]]->CountIntKey(it->first, it->second);
 			if (temp < min) {
 				rank = count;
 				min = temp;
@@ -151,11 +128,7 @@ void done(const vector<string>& table, map<string, int>& m,
 			count++;
 		}
 		for (auto it = q.strequal.begin(); it != q.strequal.end(); it++) {
-			auto range = dummyDB.tables[table[depth]]->GetStrKey(it->first).equal_range(it->second);
-			int temp = 0;
-			for (auto it2 = range.first; it2 != range.second; it2++) {
-				temp++;
-			}
+			const int temp = dummyDB.tables[table[depth]]->CountStrKey(it->first, it->second);
 			if (temp < min) {
 				rank = count;
 				min = temp;
@@ -319,42 +292,8 @@ void preprocess()
 	// I am too clever; I don't need it.
 }
 
-void execute(const string& sql)
-{
-	vector<string> token, output, table, row;
-	map<string, int> m;
-	int i;
-
-	result.clear();
-
-	if (strstr(sql.c_str(), "INSERT") != NULL) {
-		insert(sql);
-		return;
-	}
-
-	output.clear();
-	table.clear();
-	utils::tokenize(sql.c_str(), token);
-	for (i = 0; i < token.size(); i++) {
-		if (token[i] == "SELECT" || token[i] == ",")
-			continue;
-		if (token[i] == "FROM")
-			break;
-		output.push_back(token[i]);
-	}
-	for (i++; i < token.size(); i++) {
-		if (token[i] == "," || token[i] == ";")
-			continue;
-		if (token[i] == "WHERE")
-			break;
-		table.push_back(token[i]);
-	}
-	sort(table.begin(), table.end(), compareTable);
-	if (i >= token.size() && table.size() == 1 && output.size() == 2) {
-		//ProjectDone(table[0], output);
-		//return;
-	}
-	for (i++; i < token.size(); i++) {
+void createQuery(vector<string>& table, vector<string>& token, int& i) {
+  for (i++; i < token.size(); i++) {
 		if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
 			pair<string, int>& table_intIdx = col2table_intIdx[token[i]];
 			string& tableName = table_intIdx.first;
@@ -392,6 +331,14 @@ void execute(const string& sql)
 					} else {
 						table2query[tableName].create(intIdx, j, intIdx2, 2);
 					}
+				} else {
+				  if (token[i+1] == "=") {
+						table2query[tableName2].create(intIdx2, j, intIdx, 0);
+					} else if (token[i+1] == ">") {
+						table2query[tableName2].create(intIdx2, j, intIdx, 1);
+					} else {
+						table2query[tableName2].create(intIdx2, j, intIdx, 2);
+					}
 				}
 			}
 			auto it2 = col2table_strIdx.find(token[i]);
@@ -408,11 +355,51 @@ void execute(const string& sql)
 				}
 				if (table[j] == tableName2) {
 					table2query[tableName].create(strIdx, j, strIdx2, 3);
+				} else {
+				  table2query[tableName2].create(strIdx2, j, strIdx, 3);
 				}
 			}
 		}
 		i = i+3;
 	}
+}
+
+void execute(const string& sql)
+{
+	vector<string> token, output, table, row;
+	map<string, int> m;
+	int i;
+
+	result.clear();
+
+	if (strstr(sql.c_str(), "INSERT") != NULL) {
+		insert(sql);
+		return;
+	}
+
+	output.clear();
+	table.clear();
+	utils::tokenize(sql.c_str(), token);
+	for (i = 0; i < token.size(); i++) {
+		if (token[i] == "SELECT" || token[i] == ",")
+			continue;
+		if (token[i] == "FROM")
+			break;
+		output.push_back(token[i]);
+	}
+	for (i++; i < token.size(); i++) {
+		if (token[i] == "," || token[i] == ";")
+			continue;
+		if (token[i] == "WHERE")
+			break;
+		table.push_back(token[i]);
+	}
+	sort(table.begin(), table.end(), compareTable);
+	if (i >= token.size() && table.size() == 1 && output.size() == 2) {
+		//ProjectDone(table[0], output);
+		//return;
+	}
+	createQuery(table, token, i);
 	m.clear();
 	for (i = 0; i < output.size(); i++)
 		m[output[i]] = i;

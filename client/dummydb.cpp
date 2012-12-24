@@ -26,7 +26,6 @@ CursorPointer DummyTable::cursor(DummyQuery q)
 }
 CursorPointer DummyTable::cursor(int idx, int low, int high, DummyQuery q)
 {
-cout << low << ',' << high << endl;
 	typedef decltype(IntKey[idx].begin()) It;
 	auto fun = [this](It it) { return data[it->second]; };
 	return CursorPointer(new DummyCursor<It, decltype(fun)>(IntKey[idx].lower_bound(low), IntKey[idx].upper_bound(high), move(fun), q));

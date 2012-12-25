@@ -5,7 +5,7 @@ FLAGS	= -O2 -D_FILE_OFFSET_BITS=64
 
 all :
 	$(MAKE) --directory=client
-	$(CC) $(FLAGS) -o run main.cpp hash.cpp client/*.o  -lpthread 
+	$(CC) $(FLAGS) -o run main.cpp hash.cpp client/*.o workload.cpp -lpthread 
 	#client/db/build_unix/*.o
 
 clean :

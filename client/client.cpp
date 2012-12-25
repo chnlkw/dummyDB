@@ -1,6 +1,5 @@
-#include "dummydb.h"
-#include "utils.h"
-//#include "berkeleydb.h"
+#include "includes.h"
+
 
 using namespace std;
 
@@ -261,9 +260,11 @@ void preprocess()
 
 int getTableSeq(vector<string>& table, string& tableName) {
 	int i = 0;
-	for (; i < table.size() && table[i] != tableName; i++) {}
-	if ( table[i] == tableName) return i;
-	else return -1;
+	for (; i < table.size(); i++) {
+		if ( table[i] == tableName) return i;
+	}
+	assert(0);
+	return -1;
 }
 
 void createQuery(vector<string>& table, vector<string>& token, int& i) {
@@ -385,7 +386,7 @@ void execute(const string& sql)
 			int seq = getTableSeq(table, tableName);
 			pos.push_back( pair<int, pair<int, int>>(seq, pair<int, int>(0, intIdx)) );
 		}
-		auto it2 = col2table_strIdx.find(token[i]);
+		auto it2 = col2table_strIdx.find(output[i]);
 		if (it2 != col2table_strIdx.end()) {
 			auto& table_strIdx = col2table_strIdx[output[i]];
 			string& tableName = table_strIdx.first;
@@ -424,5 +425,6 @@ void close()
 {
 	// I have nothing to do.
 }
+
 
 

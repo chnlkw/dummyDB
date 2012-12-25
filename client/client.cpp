@@ -20,28 +20,6 @@ bool compareTable(string table1, string table2) {
 	return dummyDB.tables[table1]->GetDataSize() < dummyDB.tables[table2]->GetDataSize();
 }
 
-char* itoa(int value) {
-	char* str = new char[20];
-	char* res = new char[20];
-	int count = 0, i = 0;
-	while (value/10 > 0) {
-		int num = value-value/10*10;
-		value = value/10;
-		str[count] = num+48;
-		count++;
-	}
-	str[count] = value+48;
-	count++;
-	while (count > 0) {
-		count--;
-		res[i] = str[count];
-		i++;
-	}
-	res[i] = '\0';
-	delete str;
-	return res;
-}
-
 void insert(const string& sql) {
 	DummyItem dummyItem;
 	vector<string> token;
@@ -255,7 +233,6 @@ void train(const vector<string>& query, const vector<double>& weight)
 
 void load(const string& tableName, const vector<string>& row)
 {
-	
 	vector<string>& type = table2type[tableName];
 	vector<string>& column = table2name[tableName];
 	for (int i = 0; i < row.size(); i++) {
@@ -357,12 +334,16 @@ void createQuery(vector<string>& table, vector<string>& token, int& i) {
 	}
 }
 
+void clearQuery(vector<string>& table) {
+  for (int i = 0; i < table.size(); i++) {
+	  table2query[table[i]].clear();
+	}
+}
+
 void execute(const string& sql)
 {
-	vector<string> token, output, table, row;
-	map<string, int> m;
+	vector<string> token, output, table;
 	int i;
-
 	result.clear();
 
 	if (strstr(sql.c_str(), "INSERT") != NULL) {
@@ -416,6 +397,8 @@ void execute(const string& sql)
 	
 	vector<DummyItem> record;
 	done(table, pos, 0, record);
+	
+	clearQuery(table);
 }
 
 int next(char *row)

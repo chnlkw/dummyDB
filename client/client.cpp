@@ -1,6 +1,6 @@
 #include "dummydb.h"
 #include "utils.h"
-#include "berkeleydb.h"
+//#include "berkeleydb.h"
 
 using namespace std;
 
@@ -70,29 +70,25 @@ void insert(const string& sql) {
 	}
 }
 
-void done(const vector<string>& table, map<string, int>& m,
-	int depth, vector<string>& row, vector<DummyItem>& record)
-{
-	string str;
-	if (depth == table.size()) {
-		str = row[0];
-		for (int i = 1; i < row.size(); i++)
-			str += "," + row[i];
-		result.push_back(str);
-		return;
-	}
+void assembleResult(vector< pair<int, pair<int, int>> >& pos, vector<DummyItem>& record) {
+  string str;
+  if (pos[0].second.first == 0) {
+  	str = to_string(record[pos[0].first].intdata[pos[0].second.second]);
+  } else {
+  	str = record[pos[0].first].strdata[pos[0].second.second];
+  }
+  for (int i = 1; i < pos.size(); i++) {
+  	if (pos[i].second.first == 0) {
+  	  str += ","+to_string(record[pos[i].first].intdata[pos[i].second.second]);
+  	} else {
+  	  str += ","+record[pos[i].first].strdata[pos[i].second.second];
+  	}
+  }
+  result.push_back(str);
+}
 
-	vector<string>& column = table2name[table[depth]];
-	vector<pair<string, int>> pos;
-	for (int z = 0; z < column.size(); z++) {
-		auto it = m.find(column[z]);
-		if (it != m.end()) {
-			pos.push_back(pair<string, int>(it->first, it->second));
-		}
-	}
-
-	DummyQuery q = table2query[table[depth]];
-	unique_ptr<BaseTable::Cursor> ret;
+DummyQuery getTempQuery(const string& tableName, vector<DummyItem>& record) {
+	DummyQuery q = table2query[tableName];
 	for (auto it = q.colIntEqual.begin(); it != q.colIntEqual.end(); it++) {
 		q.create(it->first, record[it->second.first].intdata[it->second.second]);
 	}
@@ -105,6 +101,20 @@ void done(const vector<string>& table, map<string, int>& m,
 	for (auto it = q.colStrEqual.begin(); it != q.colStrEqual.end(); it++) {
 		q.create(it->first, record[it->second.first].strdata[it->second.second]);
 	}
+	return q;
+}
+
+void done(const vector<string>& table, vector< pair<int, pair<int, int>> >& pos,
+	int depth, vector<DummyItem>& record)
+{
+	string str;
+	if (depth == table.size()) {
+		assembleResult(pos, record);
+		return;
+	}
+  
+	DummyQuery q = getTempQuery(table[depth], record);
+	unique_ptr<BaseTable::Cursor> ret;
 	if (q.intequal.size() == 0 && q.strequal.size() == 0 && q.intrange.size() == 0) {
 		ret = dummyDB.tables[table[depth]]->cursor();
 	} else {
@@ -112,38 +122,14 @@ void done(const vector<string>& table, map<string, int>& m,
 		int count = 0;
 		int rank;
 		for (auto it = q.intrange.begin(); it != q.intrange.end(); it++) {
-			int temp;
-			if (it->second.low == INT_MIN) {
-				auto it2 = dummyDB.tables[table[depth]]->GetIntKey(it->first).lower_bound(it->second.high);
-				temp = 0;
-				for(it2--; it2 != dummyDB.tables[table[depth]]->GetIntKey(it->first).begin(); it2--) {
-					temp++;
-				}
-				temp++;
-				if (temp < min) {
-					rank = count;
-					min = temp;
-				}
+		  const int temp = dummyDB.tables[table[depth]]->CountIntKeyRange(it->first, it->second.low, it->second.high);
+			if (temp < min) {
+			  rank = count;
+			  min = temp;
 			}
-			if (it->second.high == INT_MAX) {
-				auto it2 = dummyDB.tables[table[depth]]->GetIntKey(it->first).lower_bound(it->second.low);
-				temp = 0;
-				for(; it2 != dummyDB.tables[table[depth]]->GetIntKey(it->first).end(); it2++) {
-					temp++;
-				}
-				if (temp < min) {
-					rank = count;
-					min = temp;
-				}
-			}
-			count++;
 		}
 		for (auto it = q.intequal.begin(); it != q.intequal.end(); it++) {
-			auto range = dummyDB.tables[table[depth]]->GetIntKey(it->first).equal_range(it->second);
-			int temp = 0;
-			for (auto it2 = range.first; it2 != range.second; it2++) {
-				temp++;
-			}
+		  const int temp = dummyDB.tables[table[depth]]->CountIntKey(it->first, it->second);
 			if (temp < min) {
 				rank = count;
 				min = temp;
@@ -151,11 +137,7 @@ void done(const vector<string>& table, map<string, int>& m,
 			count++;
 		}
 		for (auto it = q.strequal.begin(); it != q.strequal.end(); it++) {
-			auto range = dummyDB.tables[table[depth]]->GetStrKey(it->first).equal_range(it->second);
-			int temp = 0;
-			for (auto it2 = range.first; it2 != range.second; it2++) {
-				temp++;
-			}
+			const int temp = dummyDB.tables[table[depth]]->CountStrKey(it->first, it->second);
 			if (temp < min) {
 				rank = count;
 				min = temp;
@@ -179,20 +161,9 @@ void done(const vector<string>& table, map<string, int>& m,
 
 	for (ret->Init(); !ret->Empty() ; ret->Next()) {
 		auto data = ret->getdata();
-		for (int z = 0; z < pos.size(); z++) {
-			auto it1 = col2table_intIdx.find(pos[z].first);
-			if (it1 != col2table_intIdx.end() && it1->second.first == table[depth]) {
-				row[pos[z].second] = to_string(data.intdata[it1->second.second]);
-			}
-			auto it2 = col2table_strIdx.find(pos[z].first);
-			if (it2 != col2table_strIdx.end() && it2->second.first == table[depth]) {
-				row[pos[z].second] = data.strdata[it2->second.second];
-			}
-		}
 		record.push_back(data);
-		done(table, m, depth + 1, row, record);
+		done(table, pos, depth + 1, record);
 		record.pop_back();
-		
 	}
 }
 
@@ -223,7 +194,6 @@ void create(const string& tablename, const vector<string>& column,
 	table2query[tablename] = DummyQuery();
 	int nInt = 0, nIntKey = 0, nStr = 0, nStrKey = 0;
 	vector<int> StringTypeLen;
-	//key process reserved
 	for (int i = 0; i < column.size(); i++) {
 		if (type[i] == "INTEGER") {
 			col2table_intIdx[column[i]] = pair<string, int>(tablename, nInt);
@@ -242,7 +212,6 @@ void create(const string& tablename, const vector<string>& column,
 		col2index[column[i]] = colData.size();
 		colData.push_back(vector<string>());
 	}
-	// be careful that here, we assume, are only int keys
 	nIntKey = nInt;
 	nStrKey = nStr;
 #ifdef USE_DB_CXX
@@ -313,6 +282,81 @@ void preprocess()
 	// I am too clever; I don't need it.
 }
 
+int getTableSeq(vector<string>& table, string& tableName) {
+	int i = 0;
+	for (; i < table.size() && table[i] != tableName; i++) {}
+	if ( table[i] == tableName) return i;
+	else return -1;
+}
+
+void createQuery(vector<string>& table, vector<string>& token, int& i) {
+  for (i++; i < token.size(); i++) {
+		if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
+			pair<string, int>& table_intIdx = col2table_intIdx[token[i]];
+			string& tableName = table_intIdx.first;
+			int idx = table_intIdx.second;
+			if (token[i+1] == "=") {
+				table2query[tableName].create(idx, atoi(token[i+2].c_str()));
+			} else if (token[i+1] == "<") {
+				table2query[tableName].create(idx, INT_MIN, atoi(token[i+2].c_str())-1);
+			} else {
+				table2query[tableName].create(idx, atoi(token[i+2].c_str())+1, INT_MAX);
+			}
+		} else if (token[i+2][0] == '\'') {
+			pair<string, int>& table_strIdx = col2table_strIdx[token[i]];
+			string& tableName = table_strIdx.first;
+			int idx = table_strIdx.second;
+			table2query[tableName].create(idx, token[i+2]);
+		} else {
+			auto it1 = col2table_intIdx.find(token[i]);
+			if (it1 != col2table_intIdx.end()) {
+				auto& table_intIdx = col2table_intIdx[token[i]];
+				string& tableName = table_intIdx.first;
+				int intIdx = table_intIdx.second;
+				int seq = getTableSeq(table, tableName);
+				auto& table_intIdx2 = col2table_intIdx[token[i+2]];
+				string& tableName2 = table_intIdx2.first;
+				int intIdx2 = table_intIdx2.second;
+				int seq2 = getTableSeq(table, tableName2);
+				if (seq2 < seq) {
+					if (token[i+1] == "=") {
+						table2query[tableName].create(intIdx, seq2, intIdx2, 0);
+					} else if (token[i+1] == "<") {
+						table2query[tableName].create(intIdx, seq2, intIdx2, 1);
+					} else {
+						table2query[tableName].create(intIdx, seq2, intIdx2, 2);
+					}
+				} else {
+				  if (token[i+1] == "=") {
+						table2query[tableName2].create(intIdx2, seq, intIdx, 0);
+					} else if (token[i+1] == ">") {
+						table2query[tableName2].create(intIdx2, seq, intIdx, 1);
+					} else {
+						table2query[tableName2].create(intIdx2, seq, intIdx, 2);
+					}
+				}
+			}
+			auto it2 = col2table_strIdx.find(token[i]);
+			if (it2 != col2table_strIdx.end()) {
+				auto& table_strIdx = col2table_strIdx[token[i]];
+				string& tableName = table_strIdx.first;
+				int strIdx = table_strIdx.second;
+				int seq = getTableSeq(table, tableName);
+				auto& table_strIdx2 = col2table_strIdx[token[i+2]];
+				string& tableName2 = table_strIdx2.first;
+				int strIdx2 = table_strIdx2.second;
+				int seq2 = getTableSeq(table, tableName2);
+				if (seq2 < seq) {
+					table2query[tableName].create(strIdx, seq2, strIdx2, 3);
+				} else {
+				  table2query[tableName2].create(strIdx2, seq, strIdx, 3);
+				}
+			}
+		}
+		i = i+3;
+	}
+}
+
 void execute(const string& sql)
 {
 	vector<string> token, output, table, row;
@@ -348,74 +392,30 @@ void execute(const string& sql)
 		//ProjectDone(table[0], output);
 		//return;
 	}
-	for (i++; i < token.size(); i++) {
-		if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
-			pair<string, int>& table_intIdx = col2table_intIdx[token[i]];
+	createQuery(table, token, i);
+	
+	vector< pair<int, pair<int, int>> > pos;
+	for (i = 0; i < output.size(); i++) {
+		auto it1 = col2table_intIdx.find(output[i]);
+		if (it1 != col2table_intIdx.end()) {
+			auto& table_intIdx = col2table_intIdx[output[i]];
 			string& tableName = table_intIdx.first;
-			int idx = table_intIdx.second;
-			if (token[i+1] == "=") {
-				table2query[tableName].create(idx, atoi(token[i+2].c_str()));
-			} else if (token[i+1] == "<") {
-				table2query[tableName].create(idx, INT_MIN, atoi(token[i+2].c_str())-1);
-			} else {
-				table2query[tableName].create(idx, atoi(token[i+2].c_str())+1, INT_MAX);
-			}
-		} else if (token[i+2][0] == '\'') {
-			pair<string, int>& table_strIdx = col2table_strIdx[token[i]];
-			string& tableName = table_strIdx.first;
-			int idx = table_strIdx.second;
-			table2query[tableName].create(idx, token[i+2]);
-		} else {
-			auto it1 = col2table_intIdx.find(token[i]);
-			if (it1 != col2table_intIdx.end()) {
-				auto& table_intIdx = col2table_intIdx[token[i]];
-				string& tableName = table_intIdx.first;
-				int intIdx = table_intIdx.second;
-				auto& table_intIdx2 = col2table_intIdx[token[i+2]];
-				string& tableName2 = table_intIdx2.first;
-				int intIdx2 = table_intIdx2.second;
-				int j = 0;
-				for (; j < table.size(); j++) {
-					if (table[j] == tableName || table[j] == tableName2) break;
-				}
-				if (table[j] == tableName2) {
-					if (token[i+1] == "=") {
-						table2query[tableName].create(intIdx, j, intIdx2, 0);
-					} else if (token[i+1] == "<") {
-						table2query[tableName].create(intIdx, j, intIdx2, 1);
-					} else {
-						table2query[tableName].create(intIdx, j, intIdx2, 2);
-					}
-				}
-			}
-			auto it2 = col2table_strIdx.find(token[i]);
-			if (it2 != col2table_strIdx.end()) {
-				auto& table_strIdx = col2table_strIdx[token[i]];
-				string& tableName = table_strIdx.first;
-				int strIdx = table_strIdx.second;
-				auto& table_strIdx2 = col2table_strIdx[token[i+2]];
-				string& tableName2 = table_strIdx2.first;
-				int strIdx2 = table_strIdx2.second;
-				int j = 0;
-				for (; j < table.size(); j++) {
-					if (table[j] == tableName || table[j] == tableName2) break;
-				}
-				if (table[j] == tableName2) {
-					table2query[tableName].create(strIdx, j, strIdx2, 3);
-				}
-			}
+			int intIdx = table_intIdx.second;
+			int seq = getTableSeq(table, tableName);
+			pos.push_back( pair<int, pair<int, int>>(seq, pair<int, int>(0, intIdx)) );
 		}
-		i = i+3;
+		auto it2 = col2table_strIdx.find(token[i]);
+		if (it2 != col2table_strIdx.end()) {
+			auto& table_strIdx = col2table_strIdx[output[i]];
+			string& tableName = table_strIdx.first;
+			int strIdx = table_strIdx.second;
+			int seq = getTableSeq(table, tableName);
+			pos.push_back( pair<int, pair<int, int>>(seq, pair<int, int>(1, strIdx)) );
+		}
 	}
-	m.clear();
-	for (i = 0; i < output.size(); i++)
-		m[output[i]] = i;
-
-	row.clear();
-	row.resize(output.size(), "");
 	
 	vector<DummyItem> record;
-	done(table, m, 0, row, record);
+	done(table, pos, 0, record);
 }
 
 int next(char *row)

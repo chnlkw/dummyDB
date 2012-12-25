@@ -149,7 +149,7 @@ void done(const vector<string>& table, map<string, int>& m,
 			ret = dummyDB.tables[table[depth]]->cursor(it->first, it->second, q);
 		}
 	}
-
+	auto d = dummyDB.tables[table[depth]]->GetData(0);
 	for (ret->Init(); !ret->Empty() ; ret->Next()) {
 		auto data = ret->getdata();
 		for (int z = 0; z < pos.size(); z++) {

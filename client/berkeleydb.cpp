@@ -44,8 +44,11 @@ bool BDBTable::Insert(DummyItem &dummyitem)
 {
 	BDBItem bdbitem(dummyitem);
 	Dbt data = bdbitem.dbt();
-	Dbt key(&totalKeys, sizeof(totalKeys));
+	Dbt key(&totalKeys, sizeof(int));
 	int ret = PrimaryKey->put(NULL, &key, &data, 0);
+	
+	ret = PrimaryKey->get(NULL, &key, &data, 0);
+	auto d = this->GetData(totalKeys);
 	for (int i = 0; i < nIntKey; i++)
 	{
 		Dbt index(&dummyitem.intdata[i], sizeof(int));

@@ -2,7 +2,7 @@
 
 typedef unique_ptr<BaseTable::Cursor> CursorPointer;
 
-const DummyItem& DummyTable::GetData(int index) const {
+const DummyItem DummyTable::GetData(int index) const {
 	return data[index];
 }
 

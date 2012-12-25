@@ -290,6 +290,7 @@ void load(const string& tableName, const vector<string>& row)
 void preprocess()
 {
 	// I am too clever; I don't need it.
+	dummyDB.updateKeys();
 }
 
 void createQuery(vector<string>& table, vector<string>& token, int& i) {
@@ -376,7 +377,7 @@ void execute(const string& sql)
 		insert(sql);
 		return;
 	}
-
+	dummyDB.updateKeys(); // important for lazy key prepare
 	output.clear();
 	table.clear();
 	utils::tokenize(sql.c_str(), token);

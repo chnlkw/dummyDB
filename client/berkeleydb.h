@@ -63,7 +63,7 @@ private:
 	vector<unique_ptr<Db>> IntKey;
 	vector<unique_ptr<Db>> StrKey;
 	vector<string> DbName;
-	int totalKeys;
+	int updatedKeys, totalKeys;
 
 	Db* NewDB(string name, bool isduplicated = false);
 
@@ -100,7 +100,8 @@ public:
 		return totalKeys;
 	}
 
-	bool Insert(DummyItem &dummyitem);
+	virtual bool Insert(DummyItem &dummyitem) override;
+	virtual void UpdateKey() override;
 
 	virtual const int Count() override
 	{

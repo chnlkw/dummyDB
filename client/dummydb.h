@@ -55,6 +55,15 @@ public:
 				colStrEqual.push_back(pair<int, pair<int, int>>(col, pair<int, int>(table, col2)));
 		}
 	}
+	void clear() {
+	  intrange.clear();
+	  intequal.clear();
+	  strequal.clear();
+	  colIntEqual.clear();
+	  colIntLess.clear();
+	  colIntGreater.clear();
+	  colStrEqual.clear();
+	}
 	bool match(DummyItem &item)
 	{
 		for (const auto &it : intequal)
@@ -91,8 +100,8 @@ public:
 	virtual ~BaseTable(){};
 	virtual bool Insert(DummyItem &item) = 0;
 	virtual const DummyItem& GetData(int index) const = 0;
-	virtual const multimap<int, int>& GetIntKey(int index) = 0;
-	virtual const unordered_multimap<string, int>& GetStrKey(int index) = 0;
+//	virtual const multimap<int, int>& GetIntKey(int index) = 0;
+//	virtual const unordered_multimap<string, int>& GetStrKey(int index) = 0;
 
 	virtual const int GetDataSize() const = 0;
 	
@@ -182,8 +191,8 @@ public:
 
 	virtual const DummyItem& GetData(int index) const override;
 	virtual const int GetDataSize() const override;
-	virtual const multimap<int, int>& GetIntKey(int index) override;
-	virtual const unordered_multimap<string, int>& GetStrKey(int index) override;
+//	virtual const multimap<int, int>& GetIntKey(int index) override;
+//	virtual const unordered_multimap<string, int>& GetStrKey(int index) override;
 
 	template <class T>
 	const int count_range(T range)

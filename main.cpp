@@ -4,10 +4,11 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <iostream>
 #include <sys/time.h>
 
 #include "./hash.h"
-#include "./client/client.h"
+#include "./client.h"
 
 #define PATH		"test/"
 #define SCHEMA		(PATH "schema")
@@ -101,6 +102,9 @@ restart_1:
 
 	/* Load initial data */
 	for (i = 0; i < tables.size(); i++) {
+
+		std::cerr << "Load table " << i << std::endl;
+
 		sprintf(buf, PATH "%s.data", tables[i].c_str());
 		fin = fopen(buf, "r");
 		assert(fin != NULL);
@@ -108,11 +112,16 @@ restart_1:
 		row.clear();
 		res = fscanf(fin, "%d", &cnt);
 		assert(res == 1);
+
+		size_t lines = 0;
+
 		for (j = 0; j < cnt; j++) {
 			res = fscanf(fin, "%s", buf);
 			assert(res == 1);
 			row.push_back(buf);
+			lines++;
 			if (row.size() == 65536) {
+				cerr << "lines " << lines << endl;
 				load(tables[i], row);
 				row.clear();
 			}

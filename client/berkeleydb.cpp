@@ -25,7 +25,7 @@ Db* BDBTable::NewDB(string name, bool isduplicated)
 	if (dbenv.get() == nullptr)
 	{
 		dbenv.reset(new DbEnv(0));
-		dbenv->set_cachesize(0, 512*1024*1024, 1);
+		dbenv->set_cachesize(0, CACHE_SIZE, 1);
 		dbenv->open("data/", DB_CREATE | DB_INIT_MPOOL, 0);
 	}
 	Db* db = new Db(dbenv.get(), 0);
@@ -44,9 +44,11 @@ bool BDBTable::Insert(DummyItem &dummyitem)
 {
 	BDBItem bdbitem(dummyitem);
 	Dbt data = bdbitem.dbt();
-	Dbt key(&totalKeys, sizeof(totalKeys));
+
+	Dbt key(&totalKeys, sizeof(int));
 	int ret = PrimaryKey->put(NULL, &key, &data, 0);
-	for (int i = 0; i < nIntKey; i++)
+	
+/*	for (int i = 0; i < nIntKey; i++)
 	{
 		Dbt index(&dummyitem.intdata[i], sizeof(int));
 		IntKey[i]->put(NULL, &index, &key, 0);
@@ -55,10 +57,39 @@ bool BDBTable::Insert(DummyItem &dummyitem)
 	{
 		Dbt index((char*)dummyitem.strdata[i].c_str(), dummyitem.strdata[i].length()+1);
 		StrKey[i]->put(NULL, &index, &key, 0);
-	}
+	}*/
 	totalKeys++;
 	return true;
 }
+
+void BDBTable::UpdateKey()
+{
+	for (int i = 0; i < nIntKey; i++)
+	{
+		for (int keyid = updatedKeys; keyid < totalKeys; keyid++)
+		{
+			auto item = GetData(keyid);
+			Dbt key(&keyid, sizeof(int));
+			Dbt index(&item.intdata[i], sizeof(int));
+		//	IntKey[i]->put(NULL, &index, &key, 0);
+
+			if (keyid % 100000 == 0)
+				cout << "update Int Key " << i << " : " << keyid << " " << endl;
+		}
+	}
+	for (int i = 0; i < nStrKey; i++)
+	{
+		for (int keyid = updatedKeys; keyid < totalKeys; keyid++)
+		{
+			auto item = GetData(keyid);
+			Dbt key(&keyid, sizeof(int));
+			Dbt index((char*)item.strdata[i].c_str(), item.strdata[i].length()+1);
+		//	StrKey[i]->put(NULL, &index, &key, 0);
+		}
+	}
+	updatedKeys = totalKeys;
+}
+
 /*
 vector<int> BDBTable::Get()
 {

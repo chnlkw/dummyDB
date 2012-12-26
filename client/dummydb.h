@@ -99,7 +99,8 @@ public:
 	}
 	virtual ~BaseTable(){};
 	virtual bool Insert(DummyItem &item) = 0;
-	virtual const DummyItem& GetData(int index) const = 0;
+	virtual void UpdateKey() {} ;
+	virtual const DummyItem GetData(int index) const = 0;
 //	virtual const multimap<int, int>& GetIntKey(int index) = 0;
 //	virtual const unordered_multimap<string, int>& GetStrKey(int index) = 0;
 
@@ -189,7 +190,7 @@ public:
 		return true;
 	}
 
-	virtual const DummyItem& GetData(int index) const override;
+	virtual const DummyItem GetData(int index) const override;
 	virtual const int GetDataSize() const override;
 //	virtual const multimap<int, int>& GetIntKey(int index) override;
 //	virtual const unordered_multimap<string, int>& GetStrKey(int index) override;
@@ -260,6 +261,13 @@ public:
 	{
 		tables[name].swap(table);
 		return nTable++;
+	}
+	void updateKeys()
+	{
+		for (auto & table : tables)
+		{
+			table.second->UpdateKey();
+		}
 	}
 };
 

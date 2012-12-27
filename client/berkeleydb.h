@@ -56,6 +56,9 @@ public:
 	}
 };
 
+int bt_int_compare(DB *db, const DBT *dbt1, const DBT *dbt2);
+
+
 class BDBTable : public BaseTable
 {
 private:
@@ -65,20 +68,20 @@ private:
 	vector<string> DbName;
 	int updatedKeys, totalKeys;
 
-	Db* NewDB(string name, bool isduplicated = false);
+	Db* NewDB(string name, bool isduplicated = false, bt_compare_fcn_type compare_fun = NULL);
 
 	static unique_ptr<DbEnv> dbenv;
 
 public:
 	BDBTable(string tablename, int nInt, int nIntKey, int nStr, int nStrKey, vector<int> StringTypeLen) :
-		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen), totalKeys(0)
+		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen), totalKeys(0), updatedKeys(0)
 	{
 
 		tablename = "db_" + tablename;
-		PrimaryKey.reset(NewDB(tablename + ".primarykey", false));
+		PrimaryKey.reset(NewDB(tablename + ".primarykey", false, bt_int_compare));
 		for (int i = 0; i < nIntKey; i++)
 		{
-			IntKey.emplace_back(NewDB(tablename + ".intkey." + to_string(i), true));
+			IntKey.emplace_back(NewDB(tablename + ".intkey." + to_string(i), true, bt_int_compare));
 		}
 		for (int i = 0; i < nStrKey; i++)
 		{
@@ -120,9 +123,13 @@ public:
 		Dbt dbt(&low, sizeof(int));
 		DB_KEY_RANGE keyrange;
 		IntKey[idx]->key_range(NULL, &dbt, &keyrange, 0);
+	//	cout << "create range "<< low << ' ' << high << endl;
+	//	cout << keyrange.less << ' ' << keyrange.equal<<' '<<keyrange.greater<<endl;
+
 		int c1 = (int) (totalKeys * keyrange.less);
 		dbt.set_data(&high);
 		IntKey[idx]->key_range(NULL, &dbt, &keyrange, 0);
+	//	cout << keyrange.less << ' ' << keyrange.equal<<' '<<keyrange.greater<<endl;
 		int c2 = (int) (totalKeys * keyrange.equal);
 		int c3 = (int) (totalKeys * keyrange.less);
 		int ret = c2 + c3 - c1;
@@ -192,33 +199,32 @@ public:
 		bool outrange;
 	public:
 		BdbCursorRange(Dbc *cursorp, int low, int high, int flagFirst, int flagNext, Function &&f, DummyQuery q = DummyQuery())
-			: cursorp(cursorp), key(&low, sizeof(int)), high(high), flagFirst(flagFirst), flagNext(flagNext), f(f), Cursor(q)
+			: cursorp(cursorp), key(&low, sizeof(int)), high(high), flagFirst(flagFirst), flagNext(flagNext), f(f), Cursor(q), outrange(false)
 		{
 			ret = cursorp->get(&key, &data, flagFirst);
-			//cout << "ret = " << ret << endl;
+	//	cout << "ret = " << ret << endl;
 			if (ret == 0)
 				check();
 		}
 		virtual bool isEmpty() override
 		{ 
-		//	cout << "isempty ret = " << ret << endl;
+	//cout << "empty " << (ret) << " "<< (outrange) << endl;
 			return ret || outrange;
 		}
 		virtual DummyItem NextItem() override
 		{
-			//cout << (ret) << " "<< (outrange) << endl;
-		//	cout << "next ret = " << ret << endl;
+	//cout << "next " << (ret) << " "<< (outrange) << endl;
 			assert (ret == 0 && !outrange);
 			DummyItem item = f(data);
 			ret = cursorp->get(&key, &data, flagNext);
 			check();
-			//cout << (ret) << "+"<< (outrange) << endl;
-		//	cout << "new ret = " << ret << endl;
+	//cout << "next " << (ret) << " "<< (outrange) << endl;
 			return item;
 		}
 		void check()
 		{
-			outrange = *(int*)data.get_data() > high;
+	//cout << "check " <<  *(int*)key.get_data() << " > " << high << endl;
+			outrange = *(int*)key.get_data() > high;
 		}
 	};
 	virtual unique_ptr<Cursor> cursor(DummyQuery q = DummyQuery()) override
@@ -230,12 +236,12 @@ public:
 	}
 	virtual unique_ptr<Cursor> cursor(int idx, int low, int high, DummyQuery q = DummyQuery()) override
 	{
-		//cout << "cursor range " << low << ' ' << high << endl;
+		//cout << "cursor range " << idx << " :  " << low << ' ' << high << endl;
 		Dbc *cursorp;
 		IntKey[idx]->cursor(NULL, &cursorp, 0);
 		auto fun = [this](Dbt &data){
 			int k = *(int*)data.get_data();
-		//	cout << "find pri key " << k << endl;
+		//cout << "find pri key " << k << endl;
 			return GetData(k);
 		};
 		return unique_ptr<Cursor>(new BdbCursorRange<decltype(fun)>(cursorp, low, high, DB_SET_RANGE, DB_NEXT, move(fun), q));

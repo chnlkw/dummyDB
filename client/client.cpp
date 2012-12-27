@@ -1,5 +1,14 @@
 #include "includes.h"
 
+#include "utils.h"
+#include "dummydb.h"
+
+#ifdef USE_DB_CXX
+
+#include "berkeleydb.h"
+
+#endif
+
 
 using namespace std;
 
@@ -256,6 +265,7 @@ void load(const string& tableName, const vector<string>& row)
 void preprocess()
 {
 	// I am too clever; I don't need it.
+	dummyDB.updateKeys();
 }
 
 int getTableSeq(vector<string>& table, string& tableName) {
@@ -351,6 +361,8 @@ void execute(const string& sql)
 		insert(sql);
 		return;
 	}
+	//dummyDB.updateKeys();
+
 
 	output.clear();
 	table.clear();

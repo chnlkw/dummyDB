@@ -1,7 +1,7 @@
 #pragma once
 
-#define nUSE_DB_CXX // use Berkeley DB
+#define USE_DB_CXX // use Berkeley DB
 #define nPRINT_ROW // print each row for debug,
-#define nWINDOWS
+#define WINDOWS
 
-#define CACHE_SIZE (16*1024*1024)
+#define CACHE_SIZE (128*1024*1024)

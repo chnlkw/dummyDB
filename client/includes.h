@@ -25,12 +25,4 @@
 
 #endif
 
-#include "utils.h"
-#include "dummydb.h"
-
-#ifdef USE_DB_CXX
-
-#include "berkeleydb.h"
-
-#endif
 

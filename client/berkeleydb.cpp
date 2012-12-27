@@ -2,6 +2,7 @@
 
 unique_ptr<DbEnv> BDBTable::dbenv;
 
+
 DummyItem to_item(Dbt &d, int nInt, int nStr)
 {
 	DummyItem item;
@@ -20,7 +21,16 @@ DummyItem to_item(Dbt &d, int nInt, int nStr)
 	return item;
 }
 
-Db* BDBTable::NewDB(string name, bool isduplicated)
+int bt_int_compare(DB *db, const DBT *dbt1, const DBT *dbt2)
+{
+	int k1 = *(int*)dbt1->data;
+	int k2 = *(int*)dbt2->data;
+	if (k1 < k2) return -1;
+	else if (k1 == k2) return 0;
+	else return 1;
+}
+
+Db* BDBTable::NewDB(string name, bool isduplicated, bt_compare_fcn_type compare_fun)
 {
 	if (dbenv.get() == nullptr)
 	{
@@ -33,6 +43,10 @@ Db* BDBTable::NewDB(string name, bool isduplicated)
 	if (isduplicated)
 	{
 		db->set_flags(DB_DUPSORT);
+	}
+	if (compare_fun)
+	{
+		db->set_bt_compare(compare_fun);
 	}
 	DbName.push_back(name);
 	db->open(NULL, name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
@@ -48,44 +62,78 @@ bool BDBTable::Insert(DummyItem &dummyitem)
 	Dbt key(&totalKeys, sizeof(int));
 	int ret = PrimaryKey->put(NULL, &key, &data, 0);
 	
-/*	for (int i = 0; i < nIntKey; i++)
+	/*for (int i = 0; i < nIntKey; i++)
 	{
 		Dbt index(&dummyitem.intdata[i], sizeof(int));
 		IntKey[i]->put(NULL, &index, &key, 0);
-	}
+	}*/
 	for (int i = 0; i < nStrKey; i++)
 	{
 		Dbt index((char*)dummyitem.strdata[i].c_str(), dummyitem.strdata[i].length()+1);
 		StrKey[i]->put(NULL, &index, &key, 0);
-	}*/
+	}
 	totalKeys++;
 	return true;
 }
 
 void BDBTable::UpdateKey()
 {
+	int n = totalKeys - updatedKeys;
+	cerr << this->DbName[0] << "  " << n << " to updated " << totalKeys<<' '<<updatedKeys <<endl;
+	vector<vector<pair<int, int>>> tmpkey(nIntKey, vector<pair<int, int>>(n));
+	cerr << "reading key " << endl;
+	for (int keyid = updatedKeys, order = 0; keyid < totalKeys; keyid++, order++)
+	{
+		auto item = GetData(keyid);
+		for (int i = 0; i < nIntKey; i++)
+			tmpkey[i][order] = make_pair(item.intdata[i], keyid);
+		if (order % 100000 == 0) cerr << "\t" << order << endl;
+	}
 	for (int i = 0; i < nIntKey; i++)
 	{
-		for (int keyid = updatedKeys; keyid < totalKeys; keyid++)
+		cerr << "sorting key " << i << endl;
+		sort(tmpkey[i].begin(), tmpkey[i].end());
+	}
+	for (int i = 0; i < nIntKey; i++)
+	{
+		cerr << "writing key " << i << endl;
+		for (int keyid = updatedKeys, order = 0; keyid < totalKeys; keyid++, order++)
 		{
-			auto item = GetData(keyid);
-			Dbt key(&keyid, sizeof(int));
-			Dbt index(&item.intdata[i], sizeof(int));
-		//	IntKey[i]->put(NULL, &index, &key, 0);
+			Dbt key(&tmpkey[i][order].second, sizeof(int));
+			Dbt index(&tmpkey[i][order].first, sizeof(int));
 
-			if (keyid % 100000 == 0)
-				cout << "update Int Key " << i << " : " << keyid << " " << endl;
+
+			int ret = IntKey[i]->put(NULL, &index, &key, 0);
+			if (ret)
+					cerr <<"err updatekey ret="<<ret<<endl;
+			if (order % 100000 == 0) cerr << "\t" << order << endl;
 		}
 	}
-	for (int i = 0; i < nStrKey; i++)
+	/*for (int i = 0; i < nStrKey; i++)
 	{
 		for (int keyid = updatedKeys; keyid < totalKeys; keyid++)
 		{
 			auto item = GetData(keyid);
 			Dbt key(&keyid, sizeof(int));
 			Dbt index((char*)item.strdata[i].c_str(), item.strdata[i].length()+1);
-		//	StrKey[i]->put(NULL, &index, &key, 0);
+			StrKey[i]->put(NULL, &index, &key, 0);
 		}
+	}*/
+
+	for (int i = 0; i < 1; i++)
+	{
+	//	cout << "count int key "<< i << " "<< CountIntKeyRange(i, -10, 100000 - 1) << endl;
+		Dbc *cursorp;
+		IntKey[i]->cursor(NULL, &cursorp, 0);
+		Dbt key, data;
+		int ret;
+		while ((ret = cursorp->get(&key, &data, DB_NEXT)) == 0)
+		{
+			int k = *(int*)key.get_data();
+		//	DummyItem item = to_item(data, nInt, nStr);
+		//	cout << "get "<< *(int*)key.get_data()<< " "<< *(int*)data.get_data()<<endl;
+		}
+		cursorp->close();
 	}
 	updatedKeys = totalKeys;
 }

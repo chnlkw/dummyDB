@@ -11,9 +11,11 @@ map<string, pair<string, int>> col2table_strIdx;
 map<string, DummyQuery> table2query;
 map<string, int> col2index;
 vector<vector<string>> colData;
-vector<string> result;
+deque<string> result;
 BaseDB dummyDB;
 bool prepareProject = false;
+bool isOver;
+recursive_mutex resMutex;
 
 bool compareTable(string table1, string table2) {
 	return dummyDB.tables[table1]->GetDataSize() < dummyDB.tables[table2]->GetDataSize();
@@ -61,22 +63,33 @@ void assembleResult(vector< pair<int, pair<int, int>> >& pos, vector<DummyItem>&
   	  str += ","+record[pos[i].first].strdata[pos[i].second.second];
   	}
   }
+#ifdef USE_THREAD
+  resMutex.lock();
   result.push_back(str);
+  resMutex.unlock();
+#else
+  result.push_back(str);
+#endif
 }
 
 DummyQuery getTempQuery(const string& tableName, vector<DummyItem>& record) {
 	DummyQuery q = table2query[tableName];
+	int col, seq, col2;
 	for (auto it = q.colIntEqual.begin(); it != q.colIntEqual.end(); it++) {
-		q.create(it->first, record[it->second.first].intdata[it->second.second]);
+		tie(col, seq, col2) = *it;
+		q.create(col, record[seq].intdata[col2]);
 	}
 	for (auto it = q.colIntLess.begin(); it != q.colIntLess.end(); it++) {
-		q.create(it->first, INT_MIN, record[it->second.first].intdata[it->second.second]-1);
+		tie(col, seq, col2) = *it;
+		q.create(col, INT_MIN, record[seq].intdata[col2]-1);
 	}
 	for (auto it = q.colIntGreater.begin(); it != q.colIntGreater.end(); it++) {
-		q.create(it->first, record[it->second.first].intdata[it->second.second]+1, INT_MAX);
+		tie(col, seq, col2) = *it;
+		q.create(col, record[seq].intdata[col2]+1, INT_MAX);
 	}
 	for (auto it = q.colStrEqual.begin(); it != q.colStrEqual.end(); it++) {
-		q.create(it->first, record[it->second.first].strdata[it->second.second]);
+		tie(col, seq, col2) = *it;
+		q.create(col, record[seq].strdata[col2]);
 	}
 	return q;
 }
@@ -332,6 +345,13 @@ void clearQuery(vector<string>& table) {
 	}
 }
 
+void executeThread(vector<string> table, vector< pair<int, pair<int, int>> > pos) {
+	vector<DummyItem> record;
+	done(table, pos, 0, record);
+	clearQuery(table);
+	isOver = true;
+}
+
 void execute(const string& sql)
 {
 	vector<string> token, output, table;
@@ -390,20 +410,35 @@ void execute(const string& sql)
 			pos.push_back( pair<int, pair<int, int>>(seq, pair<int, int>(1, strIdx)) );
 		}
 	}
-	
+#ifdef USE_THREAD
+	isOver = false;
+	thread doneThread(executeThread, move(table), move(pos));
+	doneThread.detach();
+#else
 	vector<DummyItem> record;
 	done(table, pos, 0, record);
-	
 	clearQuery(table);
+#endif
 }
 
 int next(char *row)
 {
+#ifdef USE_THREAD
+	if (isOver && result.size() == 0)
+		return (0);
+	while (!isOver && result.size() < 2) {
+		_sleep(1);
+	}
+	resMutex.lock();
+	strcpy(row, result.front().c_str());
+	result.pop_front();
+	resMutex.unlock();
+#else
 	if (result.size() == 0)
 		return (0);
 	strcpy(row, result.back().c_str());
 	result.pop_back();
-
+#endif
 	/*
 	 * This is for debug only. You should avoid unnecessary output
 	 * in your submission, which will hurt the performance.

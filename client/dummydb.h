@@ -23,10 +23,10 @@ public:
 	multimap<int, IntRangeQuery> intrange;
 	map<int, int> intequal;
 	map<int, string> strequal;
-	vector<pair<int, pair<int, int>>> colIntEqual;
-	vector<pair<int, pair<int, int>>> colIntLess;
-	vector<pair<int, pair<int, int>>> colIntGreater;
-	vector<pair<int, pair<int, int>>> colStrEqual;
+	vector<tuple<int, int, int>> colIntEqual;
+	vector<tuple<int, int, int>> colIntLess;
+	vector<tuple<int, int, int>> colIntGreater;
+	vector<tuple<int, int, int>> colStrEqual;
 	
 	void create(int col, int val) {
 		intequal[col] = val;
@@ -43,16 +43,16 @@ public:
 	void create(int col, int table, int col2, int type) {
 		switch(type) {
 			case 0:
-				colIntEqual.push_back(pair<int, pair<int, int>>(col, pair<int, int>(table, col2)));
+				colIntEqual.push_back(make_tuple(col, table, col2));
 				break;
 			case 1:
-				colIntLess.push_back(pair<int, pair<int, int>>(col, pair<int, int>(table, col2)));
+				colIntLess.push_back(make_tuple(col, table, col2));
 				break;
 			case 2:
-				colIntGreater.push_back(pair<int, pair<int, int>>(col, pair<int, int>(table, col2)));
+				colIntGreater.push_back(make_tuple(col, table, col2));
 				break;
 			case 3:
-				colStrEqual.push_back(pair<int, pair<int, int>>(col, pair<int, int>(table, col2)));
+				colStrEqual.push_back(make_tuple(col, table, col2));
 		}
 	}
 	void clear() {

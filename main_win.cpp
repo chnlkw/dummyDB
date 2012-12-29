@@ -187,7 +187,7 @@ restart_2:
 
 	close();
 
-	//system("pause");
+	system("pause");
 
 	return (0);
 }

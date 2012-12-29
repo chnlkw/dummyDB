@@ -11,11 +11,12 @@ map<string, pair<string, int>> col2table_strIdx;
 map<string, DummyQuery> table2query;
 map<string, int> col2index;
 vector<vector<string>> colData;
-deque<string> result;
-BaseDB dummyDB;
+vector<string> result;
+string resultBuffer[3000];
+string *w, *r;
 bool prepareProject = false;
 bool isOver;
-recursive_mutex resMutex;
+BaseDB dummyDB;
 
 bool compareTable(string table1, string table2) {
 	return dummyDB.tables[table1]->GetDataSize() < dummyDB.tables[table2]->GetDataSize();
@@ -50,25 +51,43 @@ void insert(const string& sql) {
 }
 
 void assembleResult(vector< pair<int, pair<int, int>> >& pos, vector<DummyItem>& record) {
-  string str;
-  if (pos[0].second.first == 0) {
-  	str = to_string(record[pos[0].first].intdata[pos[0].second.second]);
-  } else {
-  	str = record[pos[0].first].strdata[pos[0].second.second];
-  }
-  for (int i = 1; i < pos.size(); i++) {
-  	if (pos[i].second.first == 0) {
-  	  str += ","+to_string(record[pos[i].first].intdata[pos[i].second.second]);
-  	} else {
-  	  str += ","+record[pos[i].first].strdata[pos[i].second.second];
-  	}
-  }
 #ifdef USE_THREAD
-  resMutex.lock();
-  result.push_back(str);
-  resMutex.unlock();
+	string& str = *w;
+	if (pos[0].second.first == 0) {
+  		str = to_string(record[pos[0].first].intdata[pos[0].second.second]);
+	} else {
+  		str = record[pos[0].first].strdata[pos[0].second.second];
+	}
+	for (int i = 1; i < pos.size(); i++) {
+  		if (pos[i].second.first == 0) {
+  			str += ","+to_string(record[pos[i].first].intdata[pos[i].second.second]);
+  		} else {
+  			str += ","+record[pos[i].first].strdata[pos[i].second.second];
+  		}
+	}
+	while(w == r-1 || w == r+2999) {
+#ifdef WINDOWS
+		_sleep(1);
 #else
-  result.push_back(str);
+		usleep(1);
+#endif
+	}
+	w == resultBuffer+2999? w -= 2999: w++;
+#else
+	string str;
+	if (pos[0].second.first == 0) {
+  		str = to_string(record[pos[0].first].intdata[pos[0].second.second]);
+	} else {
+  		str = record[pos[0].first].strdata[pos[0].second.second];
+	}
+	for (int i = 1; i < pos.size(); i++) {
+  		if (pos[i].second.first == 0) {
+  			str += ","+to_string(record[pos[i].first].intdata[pos[i].second.second]);
+  		} else {
+  		str += ","+record[pos[i].first].strdata[pos[i].second.second];
+  		}
+	}
+	result.push_back(str);
 #endif
 }
 
@@ -412,6 +431,7 @@ void execute(const string& sql)
 	}
 #ifdef USE_THREAD
 	isOver = false;
+	w = r = resultBuffer;
 	thread doneThread(executeThread, move(table), move(pos));
 	doneThread.detach();
 #else
@@ -424,15 +444,19 @@ void execute(const string& sql)
 int next(char *row)
 {
 #ifdef USE_THREAD
-	if (isOver && result.size() == 0)
+	if (isOver && w == r)
 		return (0);
-	while (!isOver && result.size() < 2) {
+	while(w == r && !isOver) {
+#ifdef WINDOWS
 		_sleep(1);
+#else
+		usleep(1);
+#endif
 	}
-	resMutex.lock();
-	strcpy(row, result.front().c_str());
-	result.pop_front();
-	resMutex.unlock();
+	if (isOver && w == r)
+		return (0);
+		strcpy(row, (*r).c_str());
+	r == resultBuffer+2999? r -= 2999: r++;
 #else
 	if (result.size() == 0)
 		return (0);

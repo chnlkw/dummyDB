@@ -14,6 +14,9 @@
 #include <utility>
 #include <algorithm>
 #include <functional>
+#include <thread>
+#include <deque>
+#include <mutex>
 
 #include <iostream>
 

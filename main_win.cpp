@@ -18,12 +18,12 @@
 
 using namespace std;
 
-#include "db_win64\db.h"
+//#include "db_win64\db.h"
 
 int main()
 {
-	DB *dbp;
-	int ret = db_create(&dbp, NULL, 0);
+	//DB *dbp;
+	//int ret = db_create(&dbp, NULL, 0);
 	FILE *fin;
 	char buf[65536], buf2[65536];
 	int i, j, cnt, cnt2, res;
@@ -187,7 +187,7 @@ restart_2:
 
 	close();
 
-	system("pause");
+	//system("pause");
 
 	return (0);
 }

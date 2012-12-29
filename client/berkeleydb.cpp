@@ -79,6 +79,7 @@ bool BDBTable::Insert(DummyItem &dummyitem)
 void BDBTable::UpdateKey()
 {
 	int n = totalKeys - updatedKeys;
+	if (n == 0) return;
 	cerr << this->DbName[0] << "  " << n << " to updated " << totalKeys<<' '<<updatedKeys <<endl;
 	vector<vector<pair<int, int>>> tmpkey(nIntKey, vector<pair<int, int>>(n));
 	cerr << "reading key " << endl;

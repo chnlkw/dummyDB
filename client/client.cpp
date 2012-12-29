@@ -294,6 +294,7 @@ void load(const string& tableName, const vector<string>& row)
 void preprocess()
 {
 	// I am too clever; I don't need it.
+	dummyDB.updateKeys();
 }
 
 void createQuery(vector<string>& table, vector<string>& token, int& i, map<string, int>& table_pos) {
@@ -388,6 +389,7 @@ void execute(const string& sql)
 		insert(sql);
 		return;
 	}
+	dummyDB.updateKeys();
 
 	output.clear();
 	table.clear();

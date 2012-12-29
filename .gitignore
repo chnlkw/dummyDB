@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Compiled Object files
 *.slo
 *.lo
@@ -16,3 +17,25 @@ run
 data/
 test*
 db/
+=======
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+#execute and template files
+run
+data/
+test*
+db/
+Debug/
+Release/
+>>>>>>> xxx

@@ -17,7 +17,6 @@
 #include <thread>
 #include <deque>
 #include <mutex>
-
 #include <iostream>
 
 #include "defs.h"
@@ -28,4 +27,5 @@
 
 #endif
 
+#include "utils.h"
 

@@ -7,6 +7,5 @@
 #define WINDOWS
 #endif
 
-#define CACHE_SIZE (128*1024*1024)
-
 #define USE_THREAD
+#define CACHE_SIZE (128*1024*1024)

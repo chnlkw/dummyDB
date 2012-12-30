@@ -15,8 +15,8 @@
 #include <algorithm>
 #include <functional>
 #include <thread>
+#include <deque>
 #include <mutex>
-
 #include <iostream>
 
 #include "defs.h"
@@ -28,11 +28,4 @@
 #endif
 
 #include "utils.h"
-#include "dummydb.h"
-
-#ifdef USE_DB_CXX
-
-#include "berkeleydb.h"
-
-#endif
 

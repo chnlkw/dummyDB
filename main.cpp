@@ -1,11 +1,12 @@
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <iostream>
 #include <vector>
 #include <cassert>
-#include <iostream>
-#include <sys/time.h>
+#include <ctime>
 
 #include "./hash.h"
 #include "./client.h"
@@ -17,8 +18,12 @@
 
 using namespace std;
 
+//#include "db_win64\db.h"
+
 int main()
 {
+	//DB *dbp;
+	//int ret = db_create(&dbp, NULL, 0);
 	FILE *fin;
 	char buf[65536], buf2[65536];
 	int i, j, cnt, cnt2, res;
@@ -26,7 +31,7 @@ int main()
 	vector<string> tables, column, type;
 	vector<string> key, query, row;
 	vector<double> weight;
-	struct timeval start, end;
+	clock_t start, end;
 
 	printf("Benchmark: %s\n", workload().c_str());
 
@@ -101,6 +106,7 @@ restart_1:
 	fclose(fin);
 
 	/* Load initial data */
+
 	for (i = 0; i < tables.size(); i++) {
 
 		std::cerr << "Load table " << i << std::endl;
@@ -119,7 +125,7 @@ restart_1:
 			res = fscanf(fin, "%s", buf);
 			assert(res == 1);
 			row.push_back(buf);
-			lines++;
+			lines ++;
 			if (row.size() == 65536) {
 				cerr << "lines " << lines << endl;
 				load(tables[i], row);
@@ -128,6 +134,7 @@ restart_1:
 		}
 		if (row.size() > 0)
 			load(tables[i], row);
+
 		fclose(fin);
 	}
 
@@ -137,8 +144,7 @@ restart_1:
 
 	/* Execute queries */
 
-	res = gettimeofday(&start, NULL);
-	assert(res == 0);
+	start = clock();
 
 	fin = fopen(QUERY, "r");
 	assert(fin != NULL);
@@ -171,16 +177,17 @@ restart_2:
 
 	fclose(fin);
 
-	res = gettimeofday(&end, NULL);
-	assert(res == 0);
+	end = clock();
 
-	double interval = (double) (end.tv_sec - start.tv_sec) +
-		(end.tv_usec - start.tv_usec) / 1000000.0;
+	double interval = (double) (end - start) / CLOCKS_PER_SEC;
+
 	printf("Response time: %.3lf sec\n", interval);
 
 	/* Close */
 
 	close();
+
+	system("pause");
 
 	return (0);
 }

@@ -455,7 +455,7 @@ int next(char *row)
 	}
 	if (isOver && w == r)
 		return (0);
-		strcpy(row, (*r).c_str());
+	strcpy(row, (*r).c_str());
 	r == resultBuffer+2999? r -= 2999: r++;
 #else
 	if (result.size() == 0)

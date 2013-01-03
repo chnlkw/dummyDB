@@ -29,18 +29,13 @@ bool compareTable(string table1, string table2) {
 }
 
 void insert(const string& sql) {
-	DummyItem dummyItem;
 	vector<string> token;
 	utils::tokenize(sql.c_str(), token);
-	int i = 0;
-	for (; i < token.size(); i++) {
-		if (token[i] == "INSERT") continue;
-		if (token[i] == "TO") break;
-	}
-	string& table = token[++i];
+	int i = 2;
+	string& table = token[i];
 	vector<string>& type = table2type[table];
 	for (i += 2; i < token.size(); i++) {
-		if (token[i] == "(") continue;
+		if (token[i] == "(" || token[i] == "," || token[i] == ";") continue;
 		DummyItem dummyItem;
 		int j = 0;
 		for(;token[i] != ")"; i++) {

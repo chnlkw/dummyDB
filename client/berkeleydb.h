@@ -103,7 +103,7 @@ public:
 
 	virtual bool Insert(DummyItem &dummyitem) override;
 	virtual void UpdateKey() override;
-
+/*
 	virtual const int Count() override
 	{
 		return totalKeys;
@@ -142,7 +142,7 @@ public:
 		return ret;
 	}
 
-
+	*/
 	virtual const DummyItem GetData(int index) const override
 	{
 		//cout << "getdata index = " << index << endl;

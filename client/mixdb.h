@@ -18,11 +18,11 @@ public:
 	virtual const DummyItem GetData(int index) const override;
 
 	virtual const int GetDataSize() const override;
-	
+	/*
 	virtual const int CountIntKey(int idx, int key) override;
 	virtual const int CountIntKeyRange(int idx, int low, int high)  override;
 	virtual const int CountStrKey(int idx, string str) override;
-
+	*/
 	class MixCursor : public Cursor
 	{
 	private:

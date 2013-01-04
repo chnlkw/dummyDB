@@ -15,7 +15,7 @@ const DummyItem MixTable::GetData(int index) const
 {
 	for (auto &table : tables)
 	{
-		auto count = table->Count();
+		auto count = table->GetDataSize();
 		if (index < count)
 			return table->GetData(index);
 		index -= count;
@@ -31,29 +31,6 @@ const int MixTable::GetDataSize() const
 	return size;
 }
 
-const int MixTable::CountIntKey(int idx, int key)
-{
-	int count = 0;
-	for (auto &table : tables)
-		count += table->CountIntKey(idx, key);
-	return count;
-}
-
-const int MixTable::CountIntKeyRange(int idx, int low, int high)
-{
-	int count = 0;
-	for (auto &table : tables)
-		count += table->CountIntKeyRange(idx, low, high);
-	return count;
-}
-
-const int MixTable::CountStrKey(int idx, string str)
-{
-	int count = 0;
-	for (auto &table : tables)
-		count += table->CountStrKey(idx, str);
-	return count;
-}
 
 typedef unique_ptr<BaseTable::Cursor> CursorPointer;
 

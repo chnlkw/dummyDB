@@ -105,12 +105,12 @@ public:
 //	virtual const unordered_multimap<string, int>& GetStrKey(int index) = 0;
 
 	virtual const int GetDataSize() const = 0;
-	
+	/*
 	virtual const int Count() { return GetDataSize(); };
 	virtual const int CountIntKey(int idx, int key) = 0;
 	virtual const int CountIntKeyRange(int idx, int low, int high) = 0;
 	virtual const int CountStrKey(int idx, string str) = 0;
-	
+	*/
 
 	class Cursor
 	{
@@ -203,7 +203,7 @@ public:
 			ret++;
 		return ret;
 	}
-
+	/*
 	virtual const int CountIntKey(int idx, int key) override
 	{
 		return count_range(IntKey[idx].equal_range(key));
@@ -216,7 +216,7 @@ public:
 	{
 		return count_range(StrKey[idx].equal_range(str));
 	}
-
+	*/
 
 	template <typename It, typename Function>
 	class DummyCursor : public Cursor

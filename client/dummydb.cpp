@@ -2,14 +2,14 @@
 
 typedef unique_ptr<BaseTable::Cursor> CursorPointer;
 
-const DummyItem& DummyTable::GetData(int index) const {
+const DummyItem DummyTable::GetData(int index) const {
 	return data[index];
 }
 
 const int DummyTable::GetDataSize() const {
 	return data.size();
 }
-
+/*
 const multimap<int, int>& DummyTable::GetIntKey(int index) {
 	return IntKey[index];
 }
@@ -17,7 +17,7 @@ const multimap<int, int>& DummyTable::GetIntKey(int index) {
 const unordered_multimap<string, int>& DummyTable::GetStrKey(int index) {
 	return StrKey[index];
 }
-
+*/
 CursorPointer DummyTable::cursor(DummyQuery q)
 {
 	typedef decltype(data.begin()) It;
@@ -26,7 +26,6 @@ CursorPointer DummyTable::cursor(DummyQuery q)
 }
 CursorPointer DummyTable::cursor(int idx, int low, int high, DummyQuery q)
 {
-cout << low << ',' << high << endl;
 	typedef decltype(IntKey[idx].begin()) It;
 	auto fun = [this](It it) { return data[it->second]; };
 	return CursorPointer(new DummyCursor<It, decltype(fun)>(IntKey[idx].lower_bound(low), IntKey[idx].upper_bound(high), move(fun), q));

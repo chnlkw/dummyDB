@@ -1,5 +1,6 @@
 #include "includes.h"
 #include "dummydb.h"
+#include "mixdb.h"
 
 #ifdef USE_DB_CXX
 #include "berkeleydb.h"
@@ -234,6 +235,7 @@ void create(const string& tablename, const vector<string>& column,
 #else
 	unique_ptr<BaseTable> table(new DummyTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
 #endif
+	unique_ptr<BaseTable> mix(new MixTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
 	dummyDB.CreateTable(table, tablename);
 }
 

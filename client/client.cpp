@@ -1,6 +1,5 @@
-#include "dummydb.h"
-#include "utils.h"
-//#include "berkeleydb.h"
+#include "includes.h"
+
 
 using namespace std;
 
@@ -13,8 +12,11 @@ map<string, DummyQuery> table2query;
 map<string, int> col2index;
 vector<vector<string>> colData;
 vector<string> result;
-BaseDB dummyDB;
+string resultBuffer[3000];
+string *w, *r;
 bool prepareProject = false;
+bool isOver;
+BaseDB dummyDB;
 
 bool compareTable(string table1, string table2) {
 	return dummyDB.tables[table1]->GetDataSize() < dummyDB.tables[table2]->GetDataSize();
@@ -49,6 +51,25 @@ void insert(const string& sql) {
 }
 
 void assembleResult(vector< pair<int, pair<int, int>> >& pos, vector<DummyItem>& record) {
+#ifdef USE_THREAD
+  string& str = *w;
+  if (pos[0].second.first == 0) {
+  	str = to_string(record[pos[0].first].intdata[pos[0].second.second]);
+  } else {
+  	str = record[pos[0].first].strdata[pos[0].second.second];
+  }
+  for (int i = 1; i < pos.size(); i++) {
+  	if (pos[i].second.first == 0) {
+  	  str += ","+to_string(record[pos[i].first].intdata[pos[i].second.second]);
+  	} else {
+  	  str += ","+record[pos[i].first].strdata[pos[i].second.second];
+  	}
+  }
+  while(w == r-1 || w == r+2999) {
+    usleep(1);
+  }
+  w == resultBuffer+2999? w -= 2999: w++;
+#else
   string str;
   if (pos[0].second.first == 0) {
   	str = to_string(record[pos[0].first].intdata[pos[0].second.second]);
@@ -63,21 +84,27 @@ void assembleResult(vector< pair<int, pair<int, int>> >& pos, vector<DummyItem>&
   	}
   }
   result.push_back(str);
+#endif
 }
 
 DummyQuery getTempQuery(const string& tableName, vector<DummyItem>& record) {
 	DummyQuery q = table2query[tableName];
+	int col, seq, col2;
 	for (auto it = q.colIntEqual.begin(); it != q.colIntEqual.end(); it++) {
-		q.create(it->first, record[it->second.first].intdata[it->second.second]);
+		tie(col, seq, col2) = *it;
+		q.create(col, record[seq].intdata[col2]);
 	}
 	for (auto it = q.colIntLess.begin(); it != q.colIntLess.end(); it++) {
-		q.create(it->first, INT_MIN, record[it->second.first].intdata[it->second.second]-1);
+		tie(col, seq, col2) = *it;
+		q.create(col, INT_MIN, record[seq].intdata[col2]-1);
 	}
 	for (auto it = q.colIntGreater.begin(); it != q.colIntGreater.end(); it++) {
-		q.create(it->first, record[it->second.first].intdata[it->second.second]+1, INT_MAX);
+		tie(col, seq, col2) = *it;
+		q.create(col, record[seq].intdata[col2]+1, INT_MAX);
 	}
 	for (auto it = q.colStrEqual.begin(); it != q.colStrEqual.end(); it++) {
-		q.create(it->first, record[it->second.first].strdata[it->second.second]);
+		tie(col, seq, col2) = *it;
+		q.create(col, record[seq].strdata[col2]);
 	}
 	return q;
 }
@@ -259,14 +286,7 @@ void preprocess()
 	// I am too clever; I don't need it.
 }
 
-int getTableSeq(vector<string>& table, string& tableName) {
-	int i = 0;
-	for (; i < table.size() && table[i] != tableName; i++) {}
-	if ( table[i] == tableName) return i;
-	else return -1;
-}
-
-void createQuery(vector<string>& table, vector<string>& token, int& i) {
+void createQuery(vector<string>& table, vector<string>& token, int& i, map<string, int>& table_pos) {
   for (i++; i < token.size(); i++) {
 		if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
 			pair<string, int>& table_intIdx = col2table_intIdx[token[i]];
@@ -290,11 +310,11 @@ void createQuery(vector<string>& table, vector<string>& token, int& i) {
 				auto& table_intIdx = col2table_intIdx[token[i]];
 				string& tableName = table_intIdx.first;
 				int intIdx = table_intIdx.second;
-				int seq = getTableSeq(table, tableName);
+				int seq = table_pos[tableName];
 				auto& table_intIdx2 = col2table_intIdx[token[i+2]];
 				string& tableName2 = table_intIdx2.first;
 				int intIdx2 = table_intIdx2.second;
-				int seq2 = getTableSeq(table, tableName2);
+				int seq2 = table_pos[tableName2];
 				if (seq2 < seq) {
 					if (token[i+1] == "=") {
 						table2query[tableName].create(intIdx, seq2, intIdx2, 0);
@@ -318,11 +338,11 @@ void createQuery(vector<string>& table, vector<string>& token, int& i) {
 				auto& table_strIdx = col2table_strIdx[token[i]];
 				string& tableName = table_strIdx.first;
 				int strIdx = table_strIdx.second;
-				int seq = getTableSeq(table, tableName);
+				int seq = table_pos[tableName];
 				auto& table_strIdx2 = col2table_strIdx[token[i+2]];
 				string& tableName2 = table_strIdx2.first;
 				int strIdx2 = table_strIdx2.second;
-				int seq2 = getTableSeq(table, tableName2);
+				int seq2 = table_pos[tableName2];
 				if (seq2 < seq) {
 					table2query[tableName].create(strIdx, seq2, strIdx2, 3);
 				} else {
@@ -340,9 +360,17 @@ void clearQuery(vector<string>& table) {
 	}
 }
 
+void executeThread(vector<string> table, vector< pair<int, pair<int, int>> > pos) {
+	vector<DummyItem> record;
+	done(table, pos, 0, record);
+	clearQuery(table);
+	isOver = true;
+}
+
 void execute(const string& sql)
 {
 	vector<string> token, output, table;
+	map<string, int> table_pos;
 	int i;
 	result.clear();
 
@@ -369,11 +397,14 @@ void execute(const string& sql)
 		table.push_back(token[i]);
 	}
 	sort(table.begin(), table.end(), compareTable);
+	for (int z = 0; z < table.size(); z++) {
+		table_pos[table[z]] = z;
+	}
 	if (i >= token.size() && table.size() == 1 && output.size() == 2) {
 		//ProjectDone(table[0], output);
 		//return;
 	}
-	createQuery(table, token, i);
+	createQuery(table, token, i, table_pos);
 	
 	vector< pair<int, pair<int, int>> > pos;
 	for (i = 0; i < output.size(); i++) {
@@ -382,32 +413,48 @@ void execute(const string& sql)
 			auto& table_intIdx = col2table_intIdx[output[i]];
 			string& tableName = table_intIdx.first;
 			int intIdx = table_intIdx.second;
-			int seq = getTableSeq(table, tableName);
+			int seq = table_pos[tableName];
 			pos.push_back( pair<int, pair<int, int>>(seq, pair<int, int>(0, intIdx)) );
 		}
-		auto it2 = col2table_strIdx.find(token[i]);
+		auto it2 = col2table_strIdx.find(output[i]);
 		if (it2 != col2table_strIdx.end()) {
 			auto& table_strIdx = col2table_strIdx[output[i]];
 			string& tableName = table_strIdx.first;
 			int strIdx = table_strIdx.second;
-			int seq = getTableSeq(table, tableName);
+			int seq = table_pos[tableName];
 			pos.push_back( pair<int, pair<int, int>>(seq, pair<int, int>(1, strIdx)) );
 		}
 	}
-	
+#ifdef USE_THREAD
+	isOver = false;
+	w = r = resultBuffer;
+	thread doneThread(executeThread, move(table), move(pos));
+	doneThread.detach();
+#else
 	vector<DummyItem> record;
 	done(table, pos, 0, record);
-	
 	clearQuery(table);
+#endif
 }
 
 int next(char *row)
 {
+#ifdef USE_THREAD
+	if (isOver && w == r)
+    return (0);
+  while(w == r && !isOver) {
+    usleep(1);
+  }
+  if (isOver && w == r)
+    return (0);
+	strcpy(row, (*r).c_str());
+  r == resultBuffer+2999? r -= 2999: r++;
+#else
 	if (result.size() == 0)
 		return (0);
 	strcpy(row, result.back().c_str());
 	result.pop_back();
-
+#endif
 	/*
 	 * This is for debug only. You should avoid unnecessary output
 	 * in your submission, which will hurt the performance.
@@ -424,5 +471,6 @@ void close()
 {
 	// I have nothing to do.
 }
+
 
 

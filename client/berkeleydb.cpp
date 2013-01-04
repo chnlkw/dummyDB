@@ -80,24 +80,24 @@ void BDBTable::UpdateKey()
 {
 	int n = totalKeys - updatedKeys;
 	if (n == 0) return;
-	cerr << this->DbName[0] << "  " << n << " to updated " << totalKeys<<' '<<updatedKeys <<endl;
+	//cerr << this->DbName[0] << "  " << n << " to updated " << totalKeys<<' '<<updatedKeys <<endl;
 	vector<vector<pair<int, int>>> tmpkey(nIntKey, vector<pair<int, int>>(n));
-	cerr << "reading key " << endl;
+	//cerr << "reading key " << endl;
 	for (int keyid = updatedKeys, order = 0; keyid < totalKeys; keyid++, order++)
 	{
 		auto item = GetData(keyid);
 		for (int i = 0; i < nIntKey; i++)
 			tmpkey[i][order] = make_pair(item.intdata[i], keyid);
-		if (order % 100000 == 0) cerr << "\t" << order << endl;
+	//	if (order % 100000 == 0) cerr << "\t" << order << endl;
 	}
 	for (int i = 0; i < nIntKey; i++)
 	{
-		cerr << "sorting key " << i << endl;
+	//	cerr << "sorting key " << i << endl;
 		sort(tmpkey[i].begin(), tmpkey[i].end());
 	}
 	for (int i = 0; i < nIntKey; i++)
 	{
-		cerr << "writing key " << i << endl;
+	//	cerr << "writing key " << i << endl;
 		for (int keyid = updatedKeys, order = 0; keyid < totalKeys; keyid++, order++)
 		{
 			Dbt key(&tmpkey[i][order].second, sizeof(int));

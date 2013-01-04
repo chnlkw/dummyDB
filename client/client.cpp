@@ -1,14 +1,13 @@
 #include "includes.h"
 #include "dummydb.h"
-#include "mixdb.h"
+
 
 #ifdef USE_DB_CXX
 #include "berkeleydb.h"
 #endif
 
-
-
 using namespace std;
+
 
 map<string, vector<string> > table2name;
 map<string, vector<string> > table2type;
@@ -25,23 +24,20 @@ bool prepareProject = false;
 bool isOver;
 BaseDB dummyDB;
 
+
 bool compareTable(string table1, string table2) {
 	return dummyDB.tables[table1]->GetDataSize() < dummyDB.tables[table2]->GetDataSize();
 }
 
+
 void insert(const string& sql) {
-	DummyItem dummyItem;
 	vector<string> token;
 	utils::tokenize(sql.c_str(), token);
-	int i = 0;
-	for (; i < token.size(); i++) {
-		if (token[i] == "INSERT") continue;
-		if (token[i] == "TO") break;
-	}
-	string& table = token[++i];
+	int i = 2;
+	string& table = token[i];
 	vector<string>& type = table2type[table];
 	for (i += 2; i < token.size(); i++) {
-		if (token[i] == "(") continue;
+		if (token[i] == "(" || token[i] == "," || token[i] == ";") continue;
 		DummyItem dummyItem;
 		int j = 0;
 		for(;token[i] != ")"; i++) {
@@ -56,6 +52,7 @@ void insert(const string& sql) {
 		dummyDB.tables[table]->Insert(dummyItem);
 	}
 }
+
 
 void assembleResult(vector< pair<int, pair<int, int>> >& pos, vector<DummyItem>& record) {
 #ifdef USE_THREAD
@@ -98,6 +95,7 @@ void assembleResult(vector< pair<int, pair<int, int>> >& pos, vector<DummyItem>&
 #endif
 }
 
+
 DummyQuery getTempQuery(const string& tableName, vector<DummyItem>& record) {
 	DummyQuery q = table2query[tableName];
 	int col, seq, col2;
@@ -119,6 +117,7 @@ DummyQuery getTempQuery(const string& tableName, vector<DummyItem>& record) {
 	}
 	return q;
 }
+
 
 void done(const vector<string>& table, vector< pair<int, pair<int, int>> >& pos,
 	int depth, vector<DummyItem>& record)
@@ -175,6 +174,7 @@ void done(const vector<string>& table, vector< pair<int, pair<int, int>> >& pos,
 		}
 	}
 
+
 	for (ret->Init(); !ret->Empty() ; ret->Next()) {
 		auto data = ret->getdata();
 		record.push_back(data);
@@ -182,6 +182,7 @@ void done(const vector<string>& table, vector< pair<int, pair<int, int>> >& pos,
 		record.pop_back();
 	}
 }
+
 
 void ProjectDone(string& table, vector<string>& output) {
 	int colSize = output.size();
@@ -200,6 +201,7 @@ void ProjectDone(string& table, vector<string>& output) {
 	}
 	delete index;
 }
+
 
 void create(const string& tablename, const vector<string>& column,
 	const vector<string>& type, const vector<string>& key)
@@ -235,9 +237,9 @@ void create(const string& tablename, const vector<string>& column,
 #else
 	unique_ptr<BaseTable> table(new DummyTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
 #endif
-	unique_ptr<BaseTable> mix(new MixTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
 	dummyDB.CreateTable(table, tablename);
 }
+
 
 void train(const vector<string>& query, const vector<double>& weight)
 {
@@ -247,9 +249,11 @@ void train(const vector<string>& query, const vector<double>& weight)
 		vector<string> token, table;
 		int i;
 
+
 		if (strstr(sql.c_str(), "INSERT") != NULL && strstr(sql.c_str(), "WHERE") != NULL) {
 			continue;
 		}
+
 
 		table.clear();
 		utils::tokenize(sql.c_str(), token);
@@ -269,6 +273,7 @@ void train(const vector<string>& query, const vector<double>& weight)
 		}
 	}
 }
+
 
 void load(const string& tableName, const vector<string>& row)
 {
@@ -293,11 +298,13 @@ void load(const string& tableName, const vector<string>& row)
 	}
 }
 
+
 void preprocess()
 {
 	// I am too clever; I don't need it.
 	dummyDB.updateKeys();
 }
+
 
 void createQuery(vector<string>& table, vector<string>& token, int& i, map<string, int>& table_pos) {
   for (i++; i < token.size(); i++) {
@@ -367,11 +374,13 @@ void createQuery(vector<string>& table, vector<string>& token, int& i, map<strin
 	}
 }
 
+
 void clearQuery(vector<string>& table) {
   for (int i = 0; i < table.size(); i++) {
 	  table2query[table[i]].clear();
 	}
 }
+
 
 void executeThread(vector<string> table, vector< pair<int, pair<int, int>> > pos) {
 	vector<DummyItem> record;
@@ -380,6 +389,7 @@ void executeThread(vector<string> table, vector< pair<int, pair<int, int>> > pos
 	isOver = true;
 }
 
+
 void execute(const string& sql)
 {
 	vector<string> token, output, table;
@@ -387,11 +397,13 @@ void execute(const string& sql)
 	int i;
 	result.clear();
 
+
 	if (strstr(sql.c_str(), "INSERT") != NULL) {
 		insert(sql);
 		return;
 	}
 	dummyDB.updateKeys();
+
 
 	output.clear();
 	table.clear();
@@ -419,7 +431,8 @@ void execute(const string& sql)
 		//return;
 	}
 	createQuery(table, token, i, table_pos);
-	
+
+
 	vector< pair<int, pair<int, int>> > pos;
 	for (i = 0; i < output.size(); i++) {
 		auto it1 = col2table_intIdx.find(output[i]);
@@ -451,6 +464,7 @@ void execute(const string& sql)
 #endif
 }
 
+
 int next(char *row)
 {
 #ifdef USE_THREAD
@@ -465,7 +479,7 @@ int next(char *row)
 	}
 	if (isOver && w == r)
 		return (0);
-		strcpy(row, (*r).c_str());
+	strcpy(row, (*r).c_str());
 	r == resultBuffer+2999? r -= 2999: r++;
 #else
 	if (result.size() == 0)
@@ -477,13 +491,16 @@ int next(char *row)
 	 * This is for debug only. You should avoid unnecessary output
 	 * in your submission, which will hurt the performance.
 	 */
-	
+
+
 #ifdef PRINT_ROW
 	printf("%s\n", row);
 #endif
 
+
 	return (1);
 }
+
 
 void close()
 {

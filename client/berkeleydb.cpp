@@ -121,7 +121,7 @@ void BDBTable::UpdateKey()
 		}
 	}*/
 
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < nIntKey; i++)
 	{
 	//	cout << "count int key "<< i << " "<< CountIntKeyRange(i, -10, 100000 - 1) << endl;
 		Dbc *cursorp;

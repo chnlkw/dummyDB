@@ -6,6 +6,11 @@
 #include "berkeleydb.h"
 #endif
 
+
+
+
+
+
 using namespace std;
 
 
@@ -15,6 +20,7 @@ map<string, vector<string> > table2pkey;
 map<string, pair<string, int>> col2table_intIdx;
 map<string, pair<string, int>> col2table_strIdx;
 map<string, DummyQuery> table2query;
+vector<string> tableSeq;
 map<string, int> col2index;
 vector<vector<string>> colData;
 vector<string> result;
@@ -22,11 +28,19 @@ string resultBuffer[3000];
 string *w, *r;
 bool prepareProject = false;
 bool isOver;
+static int sqlCount = 0;
+clock_t t1, t2;
 BaseDB dummyDB;
 
 
 bool compareTable(string table1, string table2) {
-	return dummyDB.tables[table1]->GetDataSize() < dummyDB.tables[table2]->GetDataSize();
+  if ( dummyDB.tables[table1]->GetDataSize() > 50000 || dummyDB.tables[table2]->GetDataSize() > 5000) {
+    int c1 = table2query[table1].intrange.size() + table2query[table1].intequal.size() + table2query[table1].strequal.size();
+    int c2 = table2query[table2].intrange.size() + table2query[table2].intequal.size() + table2query[table2].strequal.size();
+    return c1 > c2;
+  } else {
+  	return dummyDB.tables[table1]->GetDataSize() < dummyDB.tables[table2]->GetDataSize();
+  }
 }
 
 
@@ -127,50 +141,22 @@ void done(const vector<string>& table, vector< pair<int, pair<int, int>> >& pos,
 		assembleResult(pos, record);
 		return;
 	}
+	//cout << "table.size():" << table.size() << " depth:" << depth << " table[depth]:" << table[depth] << endl;
   
 	DummyQuery q = getTempQuery(table[depth], record);
 	unique_ptr<BaseTable::Cursor> ret;
 	if (q.intequal.size() == 0 && q.strequal.size() == 0 && q.intrange.size() == 0) {
 		ret = dummyDB.tables[table[depth]]->cursor();
 	} else {
-		int min = INT_MAX;
-		int count = 0;
-		int rank;
-		for (auto it = q.intrange.begin(); it != q.intrange.end(); it++) {
-		  const int temp = dummyDB.tables[table[depth]]->CountIntKeyRange(it->first, it->second.low, it->second.high);
-			if (temp < min) {
-			  rank = count;
-			  min = temp;
-			}
-		}
-		for (auto it = q.intequal.begin(); it != q.intequal.end(); it++) {
-		  const int temp = dummyDB.tables[table[depth]]->CountIntKey(it->first, it->second);
-			if (temp < min) {
-				rank = count;
-				min = temp;
-			}
-			count++;
-		}
-		for (auto it = q.strequal.begin(); it != q.strequal.end(); it++) {
-			const int temp = dummyDB.tables[table[depth]]->CountStrKey(it->first, it->second);
-			if (temp < min) {
-				rank = count;
-				min = temp;
-			}
-			count++;
-		}
-		if (rank < q.intrange.size()) {
-			auto it = q.intrange.begin();
-			for (int i = 0; i < rank; i++, it++) {}
-			ret = dummyDB.tables[table[depth]]->cursor(it->first, it->second.low, it->second.high, q);
-		} else if (rank < q.intequal.size()+q.intrange.size()) {
-			auto it = q.intequal.begin();
-			for (int i = q.intrange.size(); i < rank; i++, it++) {}
-			ret = dummyDB.tables[table[depth]]->cursor(it->first, it->second, q);
+		if (q.intrange.size() != 0) {
+		  auto it = q.intrange.begin();
+		  ret = dummyDB.tables[table[depth]]->cursor(it->first, it->second.low, it->second.high, q);
+		} else if (q.intequal.size() != 0) {
+		  auto it = q.intequal.begin();
+		  ret = dummyDB.tables[table[depth]]->cursor(it->first, it->second, q);
 		} else {
-			auto it = q.strequal.begin();
-			for (int i = q.intrange.size()+q.intequal.size(); i < rank; i++, it++) {}
-			ret = dummyDB.tables[table[depth]]->cursor(it->first, it->second, q);
+		  auto it = q.strequal.begin();
+		  ret = dummyDB.tables[table[depth]]->cursor(it->first, it->second, q);
 		}
 	}
 
@@ -306,8 +292,63 @@ void preprocess()
 }
 
 
-void createQuery(vector<string>& table, vector<string>& token, int& i, map<string, int>& table_pos) {
-  for (i++; i < token.size(); i++) {
+void clearQuery(vector<string>& table) {
+  for (int i = 0; i < table.size(); i++) {
+	  table2query[table[i]].clear();
+	}
+}
+
+
+void executeThread(vector< pair<int, pair<int, int>> > pos) {
+  vector<string>& table = tableSeq;
+	vector<DummyItem> record;
+	done(table, pos, 0, record);
+	clearQuery(table);
+	isOver = true;
+}
+
+
+void execute(const string& sql)
+{
+  //sqlCount++;
+ // std::cerr << "sqlCount:"<<sqlCount<<endl;
+  t1 = clock();
+	vector<string> token, output;
+	map<string, int> table_pos;
+	int i;
+	result.clear();
+
+
+	if (strstr(sql.c_str(), "INSERT") != NULL) {
+		insert(sql);
+		return;
+	}
+	dummyDB.updateKeys();
+
+
+	output.clear();
+	tableSeq.clear();
+	utils::tokenize(sql.c_str(), token);
+	for (i = 0; i < token.size(); i++) {
+		if (token[i] == "SELECT" || token[i] == ",")
+			continue;
+		if (token[i] == "FROM")
+			break;
+		output.push_back(token[i]);
+	}
+	for (i++; i < token.size(); i++) {
+		if (token[i] == "," || token[i] == ";")
+			continue;
+		if (token[i] == "WHERE")
+			break;
+		tableSeq.push_back(token[i]);
+	}
+	if (i >= token.size() && tableSeq.size() == 1 && output.size() == 2) {
+		//ProjectDone(table[0], output);
+		//return;
+	}
+	int t = i;
+	for (i++; i < token.size(); i++) {
 		if (token[i+2][0] >= '0' && token[i+2][0] <= '9') {
 			pair<string, int>& table_intIdx = col2table_intIdx[token[i]];
 			string& tableName = table_intIdx.first;
@@ -324,7 +365,17 @@ void createQuery(vector<string>& table, vector<string>& token, int& i, map<strin
 			string& tableName = table_strIdx.first;
 			int idx = table_strIdx.second;
 			table2query[tableName].create(idx, token[i+2]);
-		} else {
+		}
+		i = i+3;
+	}
+	sort(tableSeq.begin(), tableSeq.end(), compareTable);
+	for (int z = 0; z < tableSeq.size(); z++) {
+		table_pos[tableSeq[z]] = z;
+	}
+	i = t;
+	for (i++; i < token.size(); i++) {
+		if (!((token[i+2][0] >= '0' && token[i+2][0] <= '9') || token[i+2][0] == '\''))
+	  {
 			auto it1 = col2table_intIdx.find(token[i]);
 			if (it1 != col2table_intIdx.end()) {
 				auto& table_intIdx = col2table_intIdx[token[i]];
@@ -372,65 +423,6 @@ void createQuery(vector<string>& table, vector<string>& token, int& i, map<strin
 		}
 		i = i+3;
 	}
-}
-
-
-void clearQuery(vector<string>& table) {
-  for (int i = 0; i < table.size(); i++) {
-	  table2query[table[i]].clear();
-	}
-}
-
-
-void executeThread(vector<string> table, vector< pair<int, pair<int, int>> > pos) {
-	vector<DummyItem> record;
-	done(table, pos, 0, record);
-	clearQuery(table);
-	isOver = true;
-}
-
-
-void execute(const string& sql)
-{
-	vector<string> token, output, table;
-	map<string, int> table_pos;
-	int i;
-	result.clear();
-
-
-	if (strstr(sql.c_str(), "INSERT") != NULL) {
-		insert(sql);
-		return;
-	}
-	dummyDB.updateKeys();
-
-
-	output.clear();
-	table.clear();
-	utils::tokenize(sql.c_str(), token);
-	for (i = 0; i < token.size(); i++) {
-		if (token[i] == "SELECT" || token[i] == ",")
-			continue;
-		if (token[i] == "FROM")
-			break;
-		output.push_back(token[i]);
-	}
-	for (i++; i < token.size(); i++) {
-		if (token[i] == "," || token[i] == ";")
-			continue;
-		if (token[i] == "WHERE")
-			break;
-		table.push_back(token[i]);
-	}
-	sort(table.begin(), table.end(), compareTable);
-	for (int z = 0; z < table.size(); z++) {
-		table_pos[table[z]] = z;
-	}
-	if (i >= token.size() && table.size() == 1 && output.size() == 2) {
-		//ProjectDone(table[0], output);
-		//return;
-	}
-	createQuery(table, token, i, table_pos);
 
 
 	vector< pair<int, pair<int, int>> > pos;
@@ -455,12 +447,12 @@ void execute(const string& sql)
 #ifdef USE_THREAD
 	isOver = false;
 	w = r = resultBuffer;
-	thread doneThread(executeThread, move(table), move(pos));
+	thread doneThread(executeThread, move(pos));
 	doneThread.detach();
 #else
 	vector<DummyItem> record;
-	done(table, pos, 0, record);
-	clearQuery(table);
+	done(tableSeq, pos, 0, record);
+	clearQuery(tableSeq);
 #endif
 }
 
@@ -506,3 +498,5 @@ void close()
 {
 	// I have nothing to do.
 }
+
+

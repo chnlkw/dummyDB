@@ -18,6 +18,7 @@
 #include <deque>
 #include <mutex>
 #include <iostream>
+#include <cstdint>
 
 #include "defs.h"
 

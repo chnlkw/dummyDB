@@ -6,8 +6,9 @@
 #include "berkeleydb.h"
 #endif
 
-
-
+#ifdef USE_BTREE
+#include "btreedb.h"
+#endif
 
 
 
@@ -218,10 +219,14 @@ void create(const string& tablename, const vector<string>& column,
 	}
 	nIntKey = nInt;
 	nStrKey = nStr;
+#ifdef USE_BTREE
+	unique_ptr<BaseTable> table(new BTreeTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
+#else
 #ifdef USE_DB_CXX
 	unique_ptr<BaseTable> table(new BDBTable(tablename, nInt, nIntKey, nStr, nStrKey, StringTypeLen));
 #else
 	unique_ptr<BaseTable> table(new DummyTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen));
+#endif
 #endif
 	dummyDB.CreateTable(table, tablename);
 }

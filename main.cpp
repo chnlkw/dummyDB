@@ -25,8 +25,8 @@ int main()
 	//DB *dbp;
 	//int ret = db_create(&dbp, NULL, 0);
 	FILE *fin;
-	char* buf = new char[1048576];
-	char *buf2 = new char[1048576];
+	char* buf = new char[65536];
+	char *buf2 = new char[65536];
 	int i, j, cnt, cnt2, res;
 	string table;
 	vector<string> tables, column, type;
@@ -85,7 +85,7 @@ int main()
 	assert(res == 1);
 	for (i = 0; i < cnt; i++) {
 restart_1:
-		char *str = fgets(buf, 1048576, fin);
+		char *str = fgets(buf, 65536, fin);
 		assert(str == buf);
 		int len = strlen(buf);
 		if (len > 0 && buf[len - 1] == '\n') {
@@ -127,7 +127,7 @@ restart_1:
 			assert(res == 1);
 			row.push_back(buf);
 			lines ++;
-			if (row.size() == 1048576) {
+			if (row.size() == 65536) {
 				cerr << "loaded lines " << lines << endl;
 				load(tables[i], row);
 				cerr << "Inserted " << lines << endl;
@@ -155,7 +155,7 @@ restart_1:
 	assert(res == 1);
 	for (i = 0; i < cnt; i++) {
 restart_2:
-		char *str = fgets(buf, 1048576, fin);
+		char *str = fgets(buf, 65536, fin);
 		assert(str == buf);
 		int len = strlen(buf);
 		if (len > 0 && buf[len - 1] == '\n') {
@@ -175,6 +175,7 @@ restart_2:
 			checksum += myhash(buf2);
 
 		printf("Checksum: %X\n--------\n", checksum);
+		//fprintf(stderr, "Checksum: %X\n--------\n", checksum);
 	}
 
 	fclose(fin);

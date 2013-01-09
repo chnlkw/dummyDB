@@ -11,8 +11,8 @@ class BPlusTree
 {
 public:
 	typedef uint32_t TIdx;
-	typedef TKey Tkey;
-	typedef TValue TValue;
+	typedef TKey Tkey_decl;
+	typedef TValue TValue_decl;
 	private:
 
 	class Node
@@ -34,21 +34,22 @@ public:
 		}
 
 	};
-	struct InternalNode : Node
+	class InternalNode : public Node
 	{
+	public:
 		inline TKey & Key(uint32_t idx)
 		{
-			assert(idx * (sizeof(TKey) + sizeof(TIdx)) < sizeof(data));
-			return *reinterpret_cast<TKey*>(data + idx * (sizeof(TKey) + sizeof(TIdx)));
+			assert(idx * (sizeof(TKey) + sizeof(TIdx)) < sizeof(this->data));
+			return *reinterpret_cast<TKey*>(this->data + idx * (sizeof(TKey) + sizeof(TIdx)));
 		}
 		inline TIdx & Val(uint32_t idx)
 		{
-			assert(idx * (sizeof(TKey) + sizeof(TIdx)) + sizeof(TKey) < sizeof(data));
-			return *reinterpret_cast<TIdx*>(data + idx * (sizeof(TKey) + sizeof(TIdx)) + sizeof(TKey));
+			assert(idx * (sizeof(TKey) + sizeof(TIdx)) + sizeof(TKey) < sizeof(this->data));
+			return *reinterpret_cast<TIdx*>(this->data + idx * (sizeof(TKey) + sizeof(TIdx)) + sizeof(TKey));
 		}
 		inline uint32_t LowerBound(TKey key)
 		{
-			uint32_t count = header.count - 1;
+			uint32_t count = this->header.count - 1;
 			uint32_t first = 1;
 			while (count > 0)
 			{
@@ -64,21 +65,22 @@ public:
 			return first;
 		}
 	};
-	struct LeafNode : Node
+	class LeafNode : public Node
 	{
+	public:
 		inline TKey & Key(uint32_t idx)
 		{
-			assert(idx * (sizeof(TKey) + sizeof(TValue)) < sizeof(data));
-			return *reinterpret_cast<TKey*>(data + idx * (sizeof(TKey) + sizeof(TValue)));
+			assert(idx * (sizeof(TKey) + sizeof(TValue)) < sizeof(this->data));
+			return *reinterpret_cast<TKey*>(this->data + idx * (sizeof(TKey) + sizeof(TValue)));
 		}
 		inline TValue & Val(uint32_t idx)
 		{
-			assert(idx * (sizeof(TKey) + sizeof(TValue)) + sizeof(TKey) < sizeof(data));
-			return *reinterpret_cast<TValue*>(data + idx * (sizeof(TKey) + sizeof(TValue)) + sizeof(TKey));
+			assert(idx * (sizeof(TKey) + sizeof(TValue)) + sizeof(TKey) < sizeof(this->data));
+			return *reinterpret_cast<TValue*>(this->data + idx * (sizeof(TKey) + sizeof(TValue)) + sizeof(TKey));
 		}
 		inline uint32_t LowerBound(TKey key)
 		{
-			uint32_t count = header.count;
+			uint32_t count = this->header.count;
 			uint32_t first = 0;
 			while (count > 0)
 			{
@@ -222,11 +224,11 @@ public:
 	{
 		nodes.emplace_back(true);
 		root = 0;
-		uint32_t datasize = BlockSize - sizeof(Node::Header);
+		uint32_t datasize = BlockSize - sizeof(typename Node::Header);
 		limit[0] = datasize / (sizeof(TKey) + sizeof(TIdx));
 		limit[1] = datasize / (sizeof(TKey) + sizeof(TValue));
 
-		cout << "internal limit " << limit[0] << "  leaf limit " << limit[1] << endl;
+		std::cout << "internal limit " << limit[0] << "  leaf limit " << limit[1] << std::endl;
 	}
 
 	void Insert(TKey key, TValue value)

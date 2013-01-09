@@ -46,8 +46,8 @@ public:
 	template <typename TT>
 	class BTreeCursor : public Cursor
 	{
-		typedef typename TT::Tkey TKey;
-		typedef typename TT::TValue TValue;
+		typedef typename TT::Tkey_decl TKey;
+		typedef typename TT::TValue_decl TValue;
 		typedef typename TT::Iterator TIter;
 
 		TIter iter;

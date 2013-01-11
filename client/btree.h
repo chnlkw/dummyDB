@@ -228,7 +228,7 @@ public:
 		limit[0] = datasize / (sizeof(TKey) + sizeof(TIdx));
 		limit[1] = datasize / (sizeof(TKey) + sizeof(TValue));
 
-		std::cout << "internal limit " << limit[0] << "  leaf limit " << limit[1] << std::endl;
+		//std::cout << "internal limit " << limit[0] << "  leaf limit " << limit[1] << std::endl;
 	}
 
 	void Insert(TKey key, TValue value)

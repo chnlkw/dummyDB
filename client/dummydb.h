@@ -11,6 +11,15 @@ struct DummyItem
 {
 	vector<int> intdata;
 	vector<string> strdata;
+	void pr()
+	{
+		cerr << "Item : ";
+		for (auto &i : intdata) cerr << i << ' ';
+		for (auto &i : strdata) cerr << i << ' ';
+		for (int i = 0; i <strdata.size(); i++)
+			cerr << (void*)strdata[i].c_str() << ' ';
+		cerr << endl;
+	}
 };
 
 struct DummyQuery
@@ -114,7 +123,7 @@ public:
 
 	class Cursor
 	{
-	private:
+	protected:
 		DummyQuery q;
 		DummyItem data;
 		virtual bool isEmpty() = 0;
@@ -122,17 +131,18 @@ public:
 	public:
 		Cursor(DummyQuery q = DummyQuery()) : q(q) {}
 		virtual ~Cursor() {}
-		virtual DummyItem NextItem() = 0;
+		virtual void NextItem(DummyItem&) = 0;
 		void Init()
 		{
 			Next();
 		}
-		void Next()
+		virtual void Next()
 		{
 			foundnext = false;
 			while (!isEmpty())
 			{
-				data = NextItem();
+				NextItem(data);
+
 				if (q.match(data))
 				{
 					foundnext = true;
@@ -233,11 +243,12 @@ public:
 		{
 			return it == ed;
 		}
-		virtual DummyItem NextItem() override
+		virtual void NextItem(DummyItem & ret) override
 		{
-			DummyItem ret = f(it);
+			//DummyItem
+			ret = f(it);
 			it++;
-			return ret;
+			//return ret;
 		}
 	};
 

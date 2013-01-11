@@ -33,12 +33,12 @@ public:
 		{
 			cursors.push_back(move(cursor));
 		}
-		virtual DummyItem NextItem() override
+		virtual void NextItem(DummyItem & ret) override
 		{
 			while (!cursors.empty() && cursors.back()->Empty())
 				cursors.pop_back();
 			assert(!cursors.empty());
-			return cursors.back()->getdata();
+			ret =  cursors.back()->getdata();
 		}
 		virtual bool isEmpty() override
 		{

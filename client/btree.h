@@ -2,14 +2,17 @@
 
 #include "includes.h"
 
+#include "buffer.h"
+
 template <
-	size_t BlockSize,
+	uint32_t BlockShift,
 	typename TKey,
 	typename TValue
 >
 class BPlusTree
 {
 public:
+	static const uint32_t BlockSize = 1 << BlockShift;
 	typedef uint32_t TIdx;
 	typedef TKey Tkey_decl;
 	typedef TValue TValue_decl;
@@ -51,6 +54,8 @@ public:
 		{
 			uint32_t count = this->header.count - 1;
 			uint32_t first = 1;
+
+	//	std::cerr << "LowerBound count " << count << std::endl;
 			while (count > 0)
 			{
 				uint32_t step = count / 2;
@@ -97,53 +102,61 @@ public:
 		}
 	};
 	TIdx root;
-	std::vector<Node> nodes;
+//	std::vector<Node> nodes;
+	typedef Buffer<BlockShift> TBuffer;
+	typedef typename Buffer<BlockShift>::template BlockHolder<Node> BufferNode;
+	typedef typename Buffer<BlockShift>::template ConstBlockHolder<Node> BufferNodeConst;
+	TBuffer buffer;
 
 	uint32_t limit[2];
 
 	inline bool IsFull(TIdx idx)
 	{
-		return nodes[idx].header.count == limit[nodes[idx].header.isleaf];
+		BufferNodeConst node(buffer, idx);
+		return node->header.count == limit[node->header.isleaf];
 	}
 
-	void SplitChild(TIdx father, TIdx child, uint32_t ith)
+	void SplitChild(TIdx father_id, TIdx child_id, uint32_t ith)
 	{
-		uint32_t newchild = nodes.size();
-		char bo = nodes[child].header.isleaf;
-		nodes.emplace_back(bo);
-		assert(nodes[newchild].header.isleaf == nodes[child].header.isleaf);
+		BufferNode father(buffer, father_id);
+		BufferNode child(buffer, child_id);
+		char bo = child->header.isleaf;
+		TIdx newchild_id = buffer.NewBlock();
+		BufferNode newchild(buffer, newchild_id);
+		*newchild = Node(bo);
+		assert(newchild->header.isleaf == child->header.isleaf);
 		
-		nodes[newchild].header.nextidx = nodes[child].header.nextidx;
-		nodes[child].header.nextidx = newchild;
+		newchild->header.nextidx = child->header.nextidx;
+		child->header.nextidx = newchild_id;
 
-		uint32_t count = nodes[child].header.count;
+		uint32_t count = child->header.count;
 		uint32_t upkeyid = count / 2;
-		nodes[child].header.count = upkeyid;
+		child->header.count = upkeyid;
 
 		size_t off;
 		TKey upkey;
-		if (nodes[child].header.isleaf)
+		if (child->header.isleaf)
 		{
 			off = upkeyid * (sizeof(TKey) + sizeof(TValue));
-			nodes[newchild].header.count = count - upkeyid;
-			LeafNode *c = (LeafNode *)&nodes[child];
+			newchild->header.count = count - upkeyid;
+			LeafNode *c = (LeafNode *)&(*child);
 			upkey = c->Key(upkeyid);
-			memcpy(nodes[newchild].data, nodes[child].data + off, BlockSize - off);
-			assert(nodes[newchild].header.isleaf);
+			memcpy(newchild->data, child->data + off, BlockSize - off);
+			assert(newchild->header.isleaf);
 		}
 		else
 		{
 			off = upkeyid * (sizeof(TKey) + sizeof(TIdx));
-			nodes[newchild].header.count = count - upkeyid;
-			InternalNode *c = (InternalNode *)&nodes[child];
+			newchild->header.count = count - upkeyid;
+			InternalNode *c = (InternalNode *)&(*child);
 			upkey = c->Key(upkeyid);
-			memcpy(nodes[newchild].data, nodes[child].data + off, BlockSize - off);
-			InternalNode *c2 = (InternalNode *)&nodes[newchild];
+			memcpy(newchild->data, child->data + off, BlockSize - off);
+			InternalNode *c2 = (InternalNode *)&(*newchild);
 			c2->Key(0) = -1;
-			assert(!nodes[newchild].header.isleaf);
+			assert(!newchild->header.isleaf);
 		}
 
-		InternalNode *f = (InternalNode *)&nodes[father];
+		InternalNode *f = (InternalNode *)&(*father);
 		assert(f->header.count > 0);
 		for (int32_t j = f->header.count - 1; j >= ith + 1; j--)
 		{
@@ -152,14 +165,18 @@ public:
 		}
 		f->header.count++;
 		f->Key(ith + 1) = upkey;
-		f->Val(ith + 1) = newchild;
+		f->Val(ith + 1) = newchild_id;
 	}
 
 	void InsertNotFull(TIdx idx, TKey key, TValue value)
 	{
-		if (nodes[idx].header.isleaf)
+	//	std::cerr << "insert not full\n";
+		BufferNode node(buffer, idx);
+	//	fprintf(stderr, "%d  leaf %d\n", idx, node->header.isleaf);
+		if (node->header.isleaf)
 		{
-			LeafNode *cur = (LeafNode *)&nodes[idx];
+
+			LeafNode *cur = (LeafNode *)&(*node);
 			int32_t i = cur->header.count - 1;
 			while (i >= 0 && key < cur->Key(i))
 			{
@@ -173,7 +190,7 @@ public:
 			cur->header.count++;
 		}else
 		{
-			InternalNode *cur = (InternalNode *)&nodes[idx];
+			InternalNode *cur = (InternalNode *)&(*node);
  			/*int32_t i = cur->header.count - 1;
 			while (i > 0 && key < cur->Key(i))
 			{
@@ -185,7 +202,7 @@ public:
 			if (IsFull(next_idx))
 			{
 				SplitChild(idx, next_idx, i);
-				cur = (InternalNode *)&nodes[idx];
+				cur = (InternalNode *)&(*node);
 				//printblk();
 				if (key >= cur->Key(i + 1))
 					i++;
@@ -196,9 +213,10 @@ public:
 
 	bool _GetValue(TIdx idx, TKey key, TValue &value)
 	{
-		if (nodes[idx].header.isleaf)
+		BufferNode node(buffer, idx);
+		if (node->header.isleaf)
 		{
-			auto r = (LeafNode *)&nodes[idx];
+			auto r = (LeafNode *)&(*node);
 			int32_t i = r->LowerBound(key);
 			if (i < r->header.count && key == r->Key(i))
 			{
@@ -208,7 +226,7 @@ public:
 				return false;
 		}else
 		{
-			auto r = (InternalNode *)&nodes[idx];
+			auto r = (InternalNode *)&(*node);
 			int32_t i = r->LowerBound(key);
 			if (i == r->header.count || key != r->Key(i))
 				i--;
@@ -219,10 +237,15 @@ public:
 
 
 public:
-
-	BPlusTree()
+	std::string fname;
+	BPlusTree(std::string fname, typename TBuffer::CachePtr pcache) : fname(fname), buffer(fname, pcache)
 	{
-		nodes.emplace_back(true);
+		TIdx node_id = buffer.NewBlock();
+		BufferNode node(buffer, node_id);
+		*node = Node(true);
+
+		fprintf(stderr, "%d  leaf %d\n", node_id, node->header.isleaf);
+		assert(node->header.isleaf);
 		root = 0;
 		uint32_t datasize = BlockSize - sizeof(typename Node::Header);
 		limit[0] = datasize / (sizeof(TKey) + sizeof(TIdx));
@@ -233,19 +256,22 @@ public:
 
 	void Insert(TKey key, TValue value)
 	{
+	//fprintf(stderr, "insert key %d value %d\n", key, value);
 		if (IsFull(root))
 		{
-			uint32_t newroot = nodes.size();
-			nodes.emplace_back(false);
-			InternalNode *r = (InternalNode *)&nodes[newroot];
+			TIdx node_id = buffer.NewBlock();
+			BufferNode node(buffer, node_id);
+			*node = Node(false);
+			InternalNode *r = (InternalNode *)&(*node);
 			r->Key(0) = -1;
 			r->Val(0) = root;
 			r->header.count = 1;
-			SplitChild(newroot, root, 0);
-			root = newroot;
+			SplitChild(node_id, root, 0);
+			root = node_id;
 			//printblk();
 		}
 		InsertNotFull(root , key, value);
+		//printblk();
 	}
 
 	bool GetValue(TKey key, TValue &value)
@@ -258,19 +284,21 @@ public:
 		if (i == -1)
 		{
 			i = root;
-			printf("\nBtree\n");
+			std::cout << "\n" << fname << "\n";
 		}
-		uint32_t count = nodes[i].header.count;
-		printf("idx %d count %d nxt %d :", i, count, nodes[i].header.nextidx);
-		if (nodes[i].header.isleaf)
+		BufferNode node(buffer, i);
+		std::cout << &*node << "\t";
+		uint32_t count = node->header.count;
+		printf("idx %d count %d nxt %d :", i, count, node->header.nextidx);
+		if (node->header.isleaf)
 		{
-			LeafNode *r = (LeafNode *)&nodes[i];
+			LeafNode *r = (LeafNode *)&(*node);
 			for (uint32_t j = 0; j < count; j++)
 				printf(" %d(%d)", r->Key(j), r->Val(j));
 			printf("\n");
 		}else
 		{
-			InternalNode *r = (InternalNode *)&nodes[i];
+			InternalNode *r = (InternalNode *)&(*node);
 			for (uint32_t j = 0; j < count; j++)
 				printf(" %d[%d]", r->Key(j), r->Val(j));
 			printf("\n");
@@ -284,9 +312,10 @@ public:
 		BPlusTree *tree;
 		TIdx blkid;
 		uint32_t i;
+		std::shared_ptr<BufferNode> pnode;
 	public:
 		Iterator(BPlusTree *tree, TIdx blkid, uint32_t i)
-			: tree(tree), blkid(blkid), i(i)
+			: tree(tree), blkid(blkid), i(i), pnode(new BufferNode(tree->buffer, blkid))
 		{
 		}
 		inline bool isEnd()
@@ -295,22 +324,24 @@ public:
 		}
 		inline void Next()
 		{
-			auto r = (LeafNode *)&tree->nodes[blkid];
+			auto r = (LeafNode *)&**pnode;
 			i++;
 			if (i >= r->header.count)
 			{
 				i = 0;
 				blkid = r->header.nextidx;
+				if (blkid != -1)
+					pnode.reset(new BufferNode(tree->buffer, blkid));
 			}
 		}
 		inline TKey Key()
 		{
-			auto r = (LeafNode *)&tree->nodes[blkid];
+			auto r = (LeafNode *)&**pnode;
 			return r->Key(i);
 		}
 		inline TValue Val()
 		{
-			auto r = (LeafNode *)&tree->nodes[blkid];
+			auto r = (LeafNode *)&**pnode;
 			return r->Val(i);
 		}
 
@@ -318,16 +349,20 @@ public:
 
 	Iterator LowerBound(TKey key)
 	{
+//		std::cerr << "LowerBound \n";
+//		printblk();
 		TIdx idx = root;
-		while (!nodes[idx].header.isleaf)
+		std::unique_ptr<BufferNode> pnode(new BufferNode(buffer, idx));
+		while (!(*pnode)->header.isleaf)
 		{
-			auto r = (InternalNode *)&nodes[idx];
+			auto r = (InternalNode *)&(**pnode);
 			int32_t i = r->LowerBound(key);
 			i--;
 			idx = r->Val(i);
+			pnode.reset(new BufferNode(buffer, idx));
 		}
 
-		auto r = (LeafNode *)&nodes[idx];
+		auto r = (LeafNode *)&(**pnode);
 		int32_t i = r->LowerBound(key);
 		Iterator ret(this, idx, i);
 		if (i >= r->header.count)

@@ -11,4 +11,5 @@
 #define nUSE_THREAD
 #define CACHE_SIZE (512*1024*1024)
 
-#define IndexBlockSize 4096
+#define IndexBlockShift 12
+#define IndexBlockSize (1 << IndexBlockShift)

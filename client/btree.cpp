@@ -1,6 +1,7 @@
 
 #include "btree.h"
-BPlusTree<64, int, size_t> btree;
+/*
+BPlusTree<6, int, size_t> btree;
 
 using namespace std;
 
@@ -36,3 +37,4 @@ int main1()
 	system("pause");
 	return 0;
 }
+*/

@@ -4,6 +4,7 @@ FLAGS	= -O2 -D_FILE_OFFSET_BITS=64 -g
 .PHONY : all clean tar
 
 all :
+	rm -f data/*
 	$(MAKE) --directory=client
 	$(CC) $(FLAGS) -o run main.cpp hash.cpp client/*.o workload.cpp -lpthread 
 	#client/db/build_unix/*.o

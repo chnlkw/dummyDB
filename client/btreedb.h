@@ -65,26 +65,26 @@ DummyItem to_item(void * buf, int nInt, int nStr)
 class BTreeTable : public BaseTable
 {
 public:
-	typedef BPlusTree<IndexBlockSize, int, off_t> TBTreeIntKey;
-	typedef BPlusTree<IndexBlockSize, size_t, off_t> TBTreeStrKey;
+	typedef BPlusTree<IndexBlockShift, int, off_t> TBTreeIntKey;
+	typedef BPlusTree<IndexBlockShift, size_t, off_t> TBTreeStrKey;
 	typedef Buffer<12> TBuffer;
 
 	TBuffer rawdata;
 	int sum;
 
 public:
-	vector<TBTreeIntKey> IntKey;
-	vector<TBTreeStrKey> StrKey;
+	vector<unique_ptr<TBTreeIntKey>> IntKey;
+	vector<unique_ptr<TBTreeStrKey>> StrKey;
 
 	BTreeTable(string tablename, int nInt, int nIntKey, int nStr, int nStrKey, vector<int>& StringTypeLen) :
 		rawdata(string("data/")+tablename+".bin", pcache),
 		BaseTable(nInt, nIntKey, nStr, nStrKey, StringTypeLen)
 	{
 		for (int i = 0; i < nIntKey; i++) {
-			IntKey.emplace_back();
+			IntKey.emplace_back(new TBTreeIntKey(string("data/")+tablename+".int_"+std::to_string(i), pcache));
 		}
 		for (int i = 0; i < nStrKey; i++) {
-			StrKey.emplace_back();
+			StrKey.emplace_back(new TBTreeStrKey(string("data/")+tablename+".str_"+std::to_string(i), pcache));
 		}
 	}
 	bool Insert(DummyItem &item)
@@ -93,10 +93,10 @@ public:
 		off_t off = rawdata.Append(tmp.buf, tmp.size);
 //fprintf(stderr, "insert at %d\n", off);
 		for (int i = 0; i < nIntKey; i++) {
-			IntKey[i].Insert(item.intdata[i], off);
+			IntKey[i]->Insert(item.intdata[i], off);
 		}
 		for (int i = 0; i < nStrKey; i++)
-			StrKey[i].Insert(hash_str(item.strdata[i]), off);
+			StrKey[i]->Insert(hash_str(item.strdata[i]), off);
 		//data.push_back(item);
 		sum++;
 		return true;
@@ -110,12 +110,12 @@ public:
 	{
 		return sum;
 	}
-
+/*
 	void chk(const char * s)
 	{
 		rawdata.chk(s);
 	}
-
+*/
 //	virtual const multimap<int, int>& GetIntKey(int index) override;
 //	virtual const unordered_multimap<string, int>& GetStrKey(int index) override;
 	template <typename TT>
@@ -186,23 +186,23 @@ public:
 	{
 //		auto ret = new BTreePrimaryCursor(data, q);
 //		return unique_ptr<Cursor>(ret);
-		auto ret = new BTreeCursor<TBTreeIntKey>(rawdata, nInt, nStr, IntKey[0].LowerBound(INT32_MIN), INT32_MAX, q);
+		auto ret = new BTreeCursor<TBTreeIntKey>(rawdata, nInt, nStr, IntKey[0]->LowerBound(INT32_MIN), INT32_MAX, q);
 		return unique_ptr<Cursor>(ret);
 	}
 	virtual unique_ptr<Cursor> cursor(int idx, int low, int high, DummyQuery q = DummyQuery()) override
 	{
-		auto ret = new BTreeCursor<TBTreeIntKey>(rawdata, nInt, nStr, IntKey[idx].LowerBound(low), high, q);
+		auto ret = new BTreeCursor<TBTreeIntKey>(rawdata, nInt, nStr, IntKey[idx]->LowerBound(low), high, q);
 		return unique_ptr<Cursor>(ret);
 	}
 	virtual unique_ptr<Cursor> cursor(int idx, int intkey, DummyQuery q = DummyQuery()) override
 	{
-		auto ret = new BTreeCursor<TBTreeIntKey>(rawdata, nInt, nStr, IntKey[idx].LowerBound(intkey), intkey, q);
+		auto ret = new BTreeCursor<TBTreeIntKey>(rawdata, nInt, nStr, IntKey[idx]->LowerBound(intkey), intkey, q);
 		return unique_ptr<Cursor>(ret);
 	}
 	virtual unique_ptr<Cursor> cursor(int idx, string strkey, DummyQuery q = DummyQuery()) override
 	{
 		size_t h = hash_str(strkey);
-		auto ret = new BTreeCursor<TBTreeStrKey>(rawdata, nInt, nStr, StrKey[idx].LowerBound(h), h, q);
+		auto ret = new BTreeCursor<TBTreeStrKey>(rawdata, nInt, nStr, StrKey[idx]->LowerBound(h), h, q);
 		return unique_ptr<Cursor>(ret);
 	}
 

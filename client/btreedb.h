@@ -67,7 +67,7 @@ class BTreeTable : public BaseTable
 public:
 	typedef BPlusTree<IndexBlockShift, int, off_t> TBTreeIntKey;
 	typedef BPlusTree<IndexBlockShift, size_t, off_t> TBTreeStrKey;
-	typedef Buffer<12> TBuffer;
+	typedef Buffer<IndexBlockShift> TBuffer;
 
 	TBuffer rawdata;
 	int sum;

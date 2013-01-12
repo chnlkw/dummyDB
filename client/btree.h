@@ -171,11 +171,11 @@ public:
 	void InsertNotFull(TIdx idx, TKey key, TValue value)
 	{
 	//	std::cerr << "insert not full\n";
-		BufferNode node(buffer, idx);
+		BufferNodeConst node(buffer, idx);
 	//	fprintf(stderr, "%d  leaf %d\n", idx, node->header.isleaf);
 		if (node->header.isleaf)
 		{
-
+			BufferNode node(buffer, idx);
 			LeafNode *cur = (LeafNode *)&(*node);
 			int32_t i = cur->header.count - 1;
 			while (i >= 0 && key < cur->Key(i))
@@ -213,7 +213,7 @@ public:
 
 	bool _GetValue(TIdx idx, TKey key, TValue &value)
 	{
-		BufferNode node(buffer, idx);
+		BufferNodeConst node(buffer, idx);
 		if (node->header.isleaf)
 		{
 			auto r = (LeafNode *)&(*node);
@@ -312,10 +312,10 @@ public:
 		BPlusTree *tree;
 		TIdx blkid;
 		uint32_t i;
-		std::shared_ptr<BufferNode> pnode;
+		std::shared_ptr<BufferNodeConst> pnode;
 	public:
 		Iterator(BPlusTree *tree, TIdx blkid, uint32_t i)
-			: tree(tree), blkid(blkid), i(i), pnode(new BufferNode(tree->buffer, blkid))
+			: tree(tree), blkid(blkid), i(i), pnode(new BufferNodeConst(tree->buffer, blkid))
 		{
 		}
 		inline bool isEnd()
@@ -331,15 +331,15 @@ public:
 				i = 0;
 				blkid = r->header.nextidx;
 				if (blkid != -1)
-					pnode.reset(new BufferNode(tree->buffer, blkid));
+					pnode.reset(new BufferNodeConst(tree->buffer, blkid));
 			}
 		}
-		inline TKey Key()
+		inline const TKey Key()
 		{
 			auto r = (LeafNode *)&**pnode;
 			return r->Key(i);
 		}
-		inline TValue Val()
+		inline const TValue Val()
 		{
 			auto r = (LeafNode *)&**pnode;
 			return r->Val(i);
@@ -352,14 +352,14 @@ public:
 //		std::cerr << "LowerBound \n";
 //		printblk();
 		TIdx idx = root;
-		std::unique_ptr<BufferNode> pnode(new BufferNode(buffer, idx));
+		std::unique_ptr<BufferNodeConst> pnode(new BufferNodeConst(buffer, idx));
 		while (!(*pnode)->header.isleaf)
 		{
 			auto r = (InternalNode *)&(**pnode);
 			int32_t i = r->LowerBound(key);
 			i--;
 			idx = r->Val(i);
-			pnode.reset(new BufferNode(buffer, idx));
+			pnode.reset(new BufferNodeConst(buffer, idx));
 		}
 
 		auto r = (LeafNode *)&(**pnode);

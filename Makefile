@@ -1,5 +1,5 @@
 CC		= g++
-FLAGS	= -O2 -D_FILE_OFFSET_BITS=64 -g
+FLAGS	= -O2 -D_FILE_OFFSET_BITS=64 -g -std=c++11
 
 .PHONY : all clean tar
 

@@ -2,7 +2,8 @@
 
 char name[]="123 ";
 
-std::shared_ptr<Cache<IndexBlockSize>> pcache(new Cache<IndexBlockSize> (CACHE_SIZE));
+std::shared_ptr<Cache<RawBlockSize>> pcache(new Cache<RawBlockSize> (CACHE_SIZE));
+std::shared_ptr<Cache<IndexBlockSize>> pcacheindex(new Cache<IndexBlockSize> (CACHE_SIZE_INDEX));
 char EmptyBlock[IndexBlockSize];
 
 int main11()
@@ -15,7 +16,7 @@ int main11()
 	s.erase(s.begin());
 	printf("%d\n", *s.begin());
 	std::cerr << "test buffer\n";
-	Buffer<IndexBlockShift> b("data/buf.bin", pcache);
+	Buffer<RawBlockShift> b("data/buf.bin", pcache);
 	b.Append(name, sizeof(name));
 	b.Append(name, sizeof(name));
 	b.Append(name, sizeof(name));

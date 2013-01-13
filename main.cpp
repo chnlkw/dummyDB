@@ -20,6 +20,9 @@ using namespace std;
 
 //#include "db_win64\db.h"
 
+
+#include "client/buffer.h"
+
 int main()
 {
 	//DB *dbp;
@@ -176,6 +179,7 @@ restart_2:
 
 		printf("Checksum: %X\n--------\n", checksum);
 		//fprintf(stderr, "Checksum: %X\n--------\n", checksum);
+	//	pcache->Print();
 	}
 
 	fclose(fin);

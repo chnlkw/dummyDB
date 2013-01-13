@@ -65,9 +65,9 @@ DummyItem to_item(void * buf, int nInt, int nStr)
 class BTreeTable : public BaseTable
 {
 public:
-	typedef BPlusTree<IndexBlockShift, int, off_t> TBTreeIntKey;
-	typedef BPlusTree<IndexBlockShift, size_t, off_t> TBTreeStrKey;
-	typedef Buffer<IndexBlockShift> TBuffer;
+	typedef BPlusTree<RawBlockShift, int, off_t> TBTreeIntKey;
+	typedef BPlusTree<RawBlockShift, size_t, off_t> TBTreeStrKey;
+	typedef Buffer<RawBlockShift> TBuffer;
 
 	TBuffer rawdata;
 	int sum;

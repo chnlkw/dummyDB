@@ -13,6 +13,7 @@ public:
 	size_t size;
 	void *mem;
 	BlkId nblocks;
+	size_t misscount, hitcount;
 	struct Info
 	{
 		Tag tag;
@@ -92,7 +93,7 @@ public:
 	}
 
 public:
-	Cache(size_t size) : size(size)
+	Cache(size_t size) : size(size), misscount(0), hitcount(0)
 	{
 		mem = malloc(size);
 //	fprintf(stderr, "CACHE CREATED AT %x\n", mem);
@@ -103,9 +104,13 @@ public:
 		for (BlkId i = 0; i < nblocks; i++)
 			Push(i);
 	}
+	void Print()
+	{
+		fprintf(stderr, "CACHE FREE : Size = %lld hitcount = %lld misscount = %lld rate = %lf\n", size, hitcount, misscount, (double)hitcount / (misscount + hitcount));
+	}
 	~Cache()
 	{
-		fprintf(stderr, "CACHE FREE\n");
+		Print();
 		free(mem);
 	}
 	class BlockPtr
@@ -139,10 +144,13 @@ public:
 		if (it != mapping.end())
 		{
 	//printf("hit!");
+
+			hitcount ++;
 			blkid = it->second;
 		}else
 		{
 	//printf("miss!");
+			misscount++;
 			while (head == nullptr)
 			{
 				std::cerr << "Cache is full" << std::endl;
@@ -212,7 +220,7 @@ public:
 	~Buffer()
 	{
 		pcache->Flushfd(fd);
-		fprintf(stderr, "close = %d\n", fd);
+	//	fprintf(stderr, "close = %d\n", fd);
 		close(fd);
 	}
 	off_t Append(const void *buf, const size_t len)
@@ -324,4 +332,5 @@ public:
 		return BlockHolder<T>(std::move(block), off);
 	}*/
 };
-extern std::shared_ptr<Cache<IndexBlockSize>> pcache;
+extern std::shared_ptr<Cache<RawBlockSize>> pcache;
+extern std::shared_ptr<Cache<IndexBlockSize>> pcacheindex;

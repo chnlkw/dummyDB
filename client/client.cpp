@@ -294,6 +294,7 @@ void preprocess()
 {
 	// I am too clever; I don't need it.
 	dummyDB.updateKeys();
+	fprintf(stderr, "preprocessing...\n");
 }
 
 

@@ -23,7 +23,7 @@ using namespace std;
 
 #include "client/buffer.h"
 
-int main()
+int main(int argc, char **argv)
 {
 	//DB *dbp;
 	//int ret = db_create(&dbp, NULL, 0);
@@ -110,7 +110,10 @@ restart_1:
 	fclose(fin);
 
 	/* Load initial data */
-
+	if (argc == 2)
+	{
+		fprintf(stderr, "skip load table\n");
+	}else
 	for (i = 0; i < tables.size(); i++) {
 
 		std::cerr << "Load table " << i << std::endl;
@@ -179,7 +182,7 @@ restart_2:
 
 		printf("Checksum: %X\n--------\n", checksum);
 		//fprintf(stderr, "Checksum: %X\n--------\n", checksum);
-	//	pcache->Print();
+		pcache->Print();
 	}
 
 	fclose(fin);

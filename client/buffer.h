@@ -208,7 +208,7 @@ public:
 		fprintf(stderr, "open %s = %d\n", fname.c_str(), fd);
 		if (stat(fname.c_str(), &st) == 0)
 		{
-			fsize = lseek(fd, 0, SEEK_SET);
+			fsize = lseek(fd, 0, SEEK_END);
 			std::cerr << fname << " size : " << fsize << std::endl;
 		}else
 		{

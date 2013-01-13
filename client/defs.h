@@ -3,7 +3,7 @@
 #define USE_BTREE
 #define nUSE_DB_CXX // use Berkeley DB
 #define nPRINT_ROW // print each row for debug,
-#define USE_THREAD
+#define nUSE_THREAD
 
 #ifdef _WIN32
 #define WINDOWS

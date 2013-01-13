@@ -137,7 +137,7 @@ public:
 	};
 	BlockPtr Query(int fd, off_t off)
 	{
-	//printf("Query %d %d\n",fd ,off);
+	//printf("Query %d %d\n",fd ,off);while(1);
 		Tag tag(fd, off);
 		auto it = mapping.find(tag);
 		BlkId blkid;

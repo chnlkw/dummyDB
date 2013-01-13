@@ -11,7 +11,7 @@
 #include "./hash.h"
 #include "./client.h"
 
-#define PATH		"test/"
+#define PATH		"tpch/"
 #define SCHEMA		(PATH "schema")
 #define STATISTIC	(PATH "statistic")
 #define QUERY		(PATH "query")

@@ -240,13 +240,19 @@ public:
 	std::string fname;
 	BPlusTree(std::string fname, typename TBuffer::CachePtr pcache) : fname(fname), buffer(fname, pcache)
 	{
-		TIdx node_id = buffer.NewBlock();
-		BufferNode node(buffer, node_id);
-		*node = Node(true);
+		std::ifstream froot(fname+".root");
+		if (froot)
+			froot >> root;
+		else
+		{
+			TIdx node_id = buffer.NewBlock();
+			BufferNode node(buffer, node_id);
+			*node = Node(true);
 
-		fprintf(stderr, "%d  leaf %d\n", node_id, node->header.isleaf);
-		assert(node->header.isleaf);
-		root = 0;
+			//fprintf(stderr, "%d  leaf %d\n", node_id, node->header.isleaf);
+			assert(node->header.isleaf);
+			root = 0;
+		}
 		uint32_t datasize = BlockSize - sizeof(typename Node::Header);
 		limit[0] = datasize / (sizeof(TKey) + sizeof(TIdx));
 		limit[1] = datasize / (sizeof(TKey) + sizeof(TValue));
@@ -254,6 +260,11 @@ public:
 		//std::cout << "internal limit " << limit[0] << "  leaf limit " << limit[1] << std::endl;
 	}
 
+	~BPlusTree()
+	{
+		std::ofstream froot(fname+".root");
+		froot << root << std::endl;
+	}
 	void Insert(TKey key, TValue value)
 	{
 	//fprintf(stderr, "insert key %d value %d\n", key, value);
